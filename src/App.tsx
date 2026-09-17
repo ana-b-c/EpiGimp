@@ -5,13 +5,10 @@
  ** App.tsx
  */
 
+import EditorLayout from './components/EditorLayout/EditorLayout'
+
 function App() {
-  return (
-    <main>
-      <h1>EpiGimp</h1>
-      <p>Raster graphics editor</p>
-    </main>
-  )
+  return <EditorLayout />
 }
 
 export default App
