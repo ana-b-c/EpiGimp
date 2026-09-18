@@ -5,7 +5,8 @@
  ** main.ts
  */
 
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const loadRenderer = (window: BrowserWindow): void => {
@@ -36,6 +37,33 @@ const createWindow = (): void => {
 
 ipcMain.handle('ping', () => {
   return 'pong'
+})
+
+ipcMain.handle('dialog:openImage', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [
+      {
+        name: 'Images',
+        extensions: ['png', 'jpg', 'jpeg'],
+      },
+    ],
+  })
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return null
+  }
+
+  return result.filePaths[0]
+})
+
+ipcMain.handle('file:readImage', async (_event, filePath: string) => {
+  const data = await readFile(filePath)
+
+  return {
+    name: path.basename(filePath),
+    data: Array.from(data),
+  }
 })
 
 app.whenReady().then(() => {

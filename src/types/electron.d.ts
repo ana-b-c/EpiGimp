@@ -7,10 +7,17 @@
 
 export {}
 
+interface ImageFileData {
+  name: string
+  data: number[]
+}
+
 declare global {
   interface Window {
     electronAPI: {
       ping: () => Promise<string>
+      openImage: () => Promise<string | null>
+      readImage: (filePath: string) => Promise<ImageFileData>
     }
   }
 }
