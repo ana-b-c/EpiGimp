@@ -7,14 +7,32 @@
 
 import './StatusBar.css'
 
-function StatusBar() {
+interface StatusBarProps {
+  zoom: number
+  documentSize: string
+  onZoomIn: () => void
+  onZoomOut: () => void
+}
+
+function StatusBar({ zoom, documentSize, onZoomIn, onZoomOut }: StatusBarProps) {
   return (
     <footer className="status-bar">
       <span className="status-bar__item">Ready</span>
 
       <div className="status-bar__info">
-        <span className="status-bar__item">100%</span>
-        <span className="status-bar__item">No document</span>
+        <div className="status-bar__zoom">
+          <button type="button" onClick={onZoomOut} aria-label="Zoom out">
+            −
+          </button>
+
+          <span className="status-bar__item">{zoom}%</span>
+
+          <button type="button" onClick={onZoomIn} aria-label="Zoom in">
+            +
+          </button>
+        </div>
+
+        <span className="status-bar__item">{documentSize}</span>
       </div>
     </footer>
   )

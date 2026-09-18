@@ -29,3 +29,12 @@
   min-height: 0;
   overflow: hidden;
 }
+
+.editor-layout__error {
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+
+  color: var(--color-danger);
+  background: var(--color-bg-panel);
+  font-size: var(--font-size-sm);
+}
