@@ -5,31 +5,32 @@
  ** Toolbar.tsx
  */
 
+import { TOOL_DEFINITIONS } from '../../tools/toolDefinitions'
+import type { ToolId } from '../../tools/types'
+
 import './Toolbar.css'
 
-const TOOL_ITEMS = ['Select', 'Brush', 'Eraser', 'Fill', 'Text'] as const
-
-type ToolName = (typeof TOOL_ITEMS)[number]
-
 interface ToolbarProps {
-  activeTool?: ToolName
+  activeTool: ToolId
+  onToolSelect: (tool: ToolId) => void
 }
 
-function Toolbar({ activeTool = 'Select' }: ToolbarProps) {
+function Toolbar({ activeTool, onToolSelect }: ToolbarProps) {
   return (
     <aside className="toolbar" aria-label="Editing tools">
-      {TOOL_ITEMS.map((tool) => {
-        const isActive = tool === activeTool
+      {TOOL_DEFINITIONS.map((tool) => {
+        const isActive = tool.id === activeTool
 
         return (
           <button
             className={`toolbar__item${isActive ? ' toolbar__item--active' : ''}`}
             type="button"
-            key={tool}
-            title={tool}
+            key={tool.id}
+            title={tool.label}
             aria-pressed={isActive}
+            onClick={() => onToolSelect(tool.id)}
           >
-            {tool}
+            {tool.label}
           </button>
         )
       })}
