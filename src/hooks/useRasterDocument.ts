@@ -9,6 +9,8 @@ import { useState } from 'react'
 import type { RasterDocument } from '../types/RasterDocument'
 import { createRasterDocument } from '../utils/createRasterDocument'
 import { loadRasterImage } from '../utils/loadRasterImage'
+import type { RectangleSelection } from '../tools/selection/types'
+import { cropImageData } from '../tools/selection/cropImageData'
 
 export function useRasterDocument() {
   const [document, setDocument] = useState<RasterDocument | null>(null)
@@ -37,10 +39,48 @@ export function useRasterDocument() {
     }
   }
 
+  const updateDocumentImageData = (imageData: ImageData): void => {
+    setDocument((currentDocument) => {
+      if (!currentDocument) {
+        return null
+      }
+
+      return {
+        ...currentDocument,
+        imageData,
+      }
+    })
+  }
+
+  const cropDocument = (selection: RectangleSelection): void => {
+    setDocument((currentDocument) => {
+      if (!currentDocument) {
+        return null
+      }
+
+      const croppedImageData = cropImageData(currentDocument.imageData, selection)
+
+      return {
+        ...currentDocument,
+        width: croppedImageData.width,
+        height: croppedImageData.height,
+        imageData: croppedImageData,
+      }
+    })
+  }
+
+  const replaceDocument = (rasterDocument: RasterDocument): void => {
+    setDocument(rasterDocument)
+    setError(null)
+  }
+
   return {
     document,
     error,
     createDocument,
     openDocument,
+    updateDocumentImageData,
+    cropDocument,
+    replaceDocument,
   }
 }
