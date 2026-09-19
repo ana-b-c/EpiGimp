@@ -5,16 +5,79 @@
  ** ToolOptions.tsx
  */
 
+import type { BrushOptions } from '../../tools/brush/types'
+import type { EraserOptions } from '../../tools/eraser/types'
+import type { ToolId } from '../../tools/types'
+
 import './ToolOptions.css'
 
-function ToolOptions() {
+interface ToolOptionsProps {
+  activeTool: ToolId
+  brushOptions: BrushOptions
+  eraserOptions: EraserOptions
+  onBrushSizeChange: (size: number) => void
+  onBrushColorChange: (color: string) => void
+  onEraserSizeChange: (size: number) => void
+  hasSelection: boolean
+  onCrop: () => void
+}
+
+function ToolOptions({
+  activeTool,
+  brushOptions,
+  eraserOptions,
+  onBrushSizeChange,
+  onBrushColorChange,
+  onEraserSizeChange,
+  hasSelection,
+  onCrop,
+}: ToolOptionsProps) {
   return (
     <section className="tool-options">
-      <h2 className="tool-options__title">Tool Options</h2>
+      <span className="tool-options__label">Tool Options</span>
 
-      <div className="tool-options__content">
-        <p>Select a tool to display its options.</p>
-      </div>
+      {activeTool === 'brush' && (
+        <>
+          <label className="tool-options__field">
+            Size
+            <input
+              type="number"
+              min="1"
+              max="200"
+              value={brushOptions.size}
+              onChange={(event) => onBrushSizeChange(Number(event.target.value))}
+            />
+          </label>
+
+          <label className="tool-options__field">
+            Color
+            <input
+              type="color"
+              value={brushOptions.color}
+              onChange={(event) => onBrushColorChange(event.target.value)}
+            />
+          </label>
+        </>
+      )}
+
+      {activeTool === 'eraser' && (
+        <label className="tool-options__field">
+          Size
+          <input
+            type="number"
+            min="1"
+            max="200"
+            value={eraserOptions.size}
+            onChange={(event) => onEraserSizeChange(Number(event.target.value))}
+          />
+        </label>
+      )}
+
+      {activeTool === 'rectangle-select' && (
+        <button type="button" disabled={!hasSelection} onClick={onCrop}>
+          Crop
+        </button>
+      )}
     </section>
   )
 }
