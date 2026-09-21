@@ -5,10 +5,13 @@
  ** RasterDocument.ts
  */
 
+import type { Layer } from '../layers/types'
+
 export interface RasterDocument {
   id: string
   name: string
   width: number
   height: number
-  imageData: ImageData
+  layers: Layer[]
+  activeLayerId: string
 }

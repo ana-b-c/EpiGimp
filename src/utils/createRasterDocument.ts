@@ -5,6 +5,7 @@
  ** createRasterDocument.ts
  */
 
+import { createLayer } from '../layers/createLayer'
 import type { RasterDocument } from '../types/RasterDocument'
 import { areValidDocumentDimensions } from './documentDimensions'
 
@@ -17,11 +18,14 @@ export function createRasterDocument(
     throw new Error('Invalid document dimensions')
   }
 
+  const layer = createLayer(width, height, 'Background')
+
   return {
     id: crypto.randomUUID(),
     name,
     width,
     height,
-    imageData: new ImageData(width, height),
+    layers: [layer],
+    activeLayerId: layer.id,
   }
 }

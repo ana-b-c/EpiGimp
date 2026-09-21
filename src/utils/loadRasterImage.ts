@@ -5,6 +5,7 @@
  ** loadRasterImage.ts
  */
 
+import { createLayer } from '../layers/createLayer'
 import type { RasterDocument } from '../types/RasterDocument'
 
 export async function loadRasterImage(name: string, data: number[]): Promise<RasterDocument> {
@@ -25,12 +26,16 @@ export async function loadRasterImage(name: string, data: number[]): Promise<Ras
 
     context.drawImage(bitmap, 0, 0)
 
+    const imageData = context.getImageData(0, 0, bitmap.width, bitmap.height)
+    const layer = createLayer(bitmap.width, bitmap.height, 'Background', imageData)
+
     return {
       id: crypto.randomUUID(),
       name,
       width: bitmap.width,
       height: bitmap.height,
-      imageData: context.getImageData(0, 0, bitmap.width, bitmap.height),
+      layers: [layer],
+      activeLayerId: layer.id,
     }
   } finally {
     bitmap.close()

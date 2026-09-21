@@ -34,6 +34,15 @@ function EditorLayout() {
     openDocument,
     updateDocumentImageData,
     cropDocument,
+    addLayer,
+    deleteLayer,
+    selectLayer,
+    renameLayer,
+    duplicateLayer,
+    toggleLayerVisibility,
+    setLayerOpacity,
+    moveLayerUp,
+    moveLayerDown,
     replaceDocument,
   } = useRasterDocument()
 
@@ -72,6 +81,97 @@ function EditorLayout() {
     pushHistory(document)
     cropDocument(selection)
     clearSelection()
+  }
+
+  const handleAddLayer = (): void => {
+    if (!document) {
+      return
+    }
+
+    pushHistory(document)
+    addLayer()
+  }
+
+  const handleDeleteLayer = (layerId: string): void => {
+    if (!document || document.layers.length <= 1) {
+      return
+    }
+
+    pushHistory(document)
+    deleteLayer(layerId)
+  }
+
+  const handleRenameLayer = (layerId: string, name: string): void => {
+    const layer = document?.layers.find((currentLayer) => currentLayer.id === layerId)
+
+    const trimmedName = name.trim()
+
+    if (!document || !layer || !trimmedName || layer.name === trimmedName) {
+      return
+    }
+
+    pushHistory(document)
+    renameLayer(layerId, trimmedName)
+  }
+
+  const handleDuplicateLayer = (layerId: string): void => {
+    if (!document) {
+      return
+    }
+
+    pushHistory(document)
+    duplicateLayer(layerId)
+  }
+
+  const handleToggleLayerVisibility = (layerId: string): void => {
+    if (!document) {
+      return
+    }
+
+    pushHistory(document)
+    toggleLayerVisibility(layerId)
+  }
+
+  const handleLayerOpacityEditStart = (): void => {
+    if (!document) {
+      return
+    }
+
+    pushHistory(document)
+  }
+
+  const handleLayerOpacityChange = (layerId: string, opacity: number): void => {
+    setLayerOpacity(layerId, opacity)
+  }
+
+  const handleMoveLayerUp = (layerId: string): void => {
+    if (!document) {
+      return
+    }
+
+    const layerIndex = document.layers.findIndex((layer) => layer.id === layerId)
+
+    if (layerIndex === -1 || layerIndex === document.layers.length - 1) {
+      return
+    }
+
+    pushHistory(document)
+    moveLayerUp(layerId)
+  }
+
+  const handleMoveLayerDown = (layerId: string): void => {
+    if (!document) {
+      return
+    }
+
+    const layerIndex = document.layers.findIndex((layer) => layer.id === layerId)
+
+    if (layerIndex <= 0) {
+      return
+    }
+
+    pushHistory(document)
+    moveLayerDown(layerId)
   }
 
   const handleUndo = (): void => {
@@ -144,7 +244,20 @@ function EditorLayout() {
           onEditStart={handleEditStart}
         />
 
-        <LayersPanel />
+        <LayersPanel
+          layers={document?.layers ?? []}
+          activeLayerId={document?.activeLayerId ?? null}
+          onAddLayer={handleAddLayer}
+          onDeleteLayer={handleDeleteLayer}
+          onSelectLayer={selectLayer}
+          onRenameLayer={handleRenameLayer}
+          onDuplicateLayer={handleDuplicateLayer}
+          onToggleVisibility={handleToggleLayerVisibility}
+          onOpacityChange={handleLayerOpacityChange}
+          onOpacityEditStart={handleLayerOpacityEditStart}
+          onMoveLayerUp={handleMoveLayerUp}
+          onMoveLayerDown={handleMoveLayerDown}
+        />
       </div>
 
       <StatusBar
