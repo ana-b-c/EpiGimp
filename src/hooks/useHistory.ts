@@ -7,6 +7,7 @@
 
 import { useState } from 'react'
 
+import type { Layer } from '../layers/types'
 import type { RasterDocument } from '../types/RasterDocument'
 
 interface HistoryState {
@@ -14,14 +15,21 @@ interface HistoryState {
   future: RasterDocument[]
 }
 
+function cloneLayer(layer: Layer): Layer {
+  return {
+    ...layer,
+    imageData: new ImageData(
+      new Uint8ClampedArray(layer.imageData.data),
+      layer.imageData.width,
+      layer.imageData.height,
+    ),
+  }
+}
+
 function cloneDocument(document: RasterDocument): RasterDocument {
   return {
     ...document,
-    imageData: new ImageData(
-      new Uint8ClampedArray(document.imageData.data),
-      document.imageData.width,
-      document.imageData.height,
-    ),
+    layers: document.layers.map(cloneLayer),
   }
 }
 
@@ -46,7 +54,6 @@ export function useHistory() {
     }
 
     const previousDocument = history.past[history.past.length - 1]
-
     const currentSnapshot = cloneDocument(currentDocument)
 
     setHistory((currentHistory) => ({
