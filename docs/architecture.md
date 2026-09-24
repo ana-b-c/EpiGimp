@@ -1,427 +1,572 @@
 # EpiGimp Architecture
 
-## 1. Overview
+## Overview
 
-EpiGimp v1.0 is a desktop raster graphics editor built with **Electron,
-React, TypeScript and HTML5 Canvas**.
+EpiGimp is a desktop raster graphics editor built with:
+
+- Electron;
+- React;
+- TypeScript;
+- HTML5 Canvas.
+
+The application follows a modular architecture where user interface,
+editor state, raster processing and operating-system interactions are
+separated into dedicated domains.
+
+The main objective of this architecture is to keep the codebase readable,
+maintainable and easy to extend.
+
+---
+
+# Global Architecture
+
+The application can be represented as:
+
+    +--------------------------------------------------+
+    |                  React Renderer                  |
+    |                                                  |
+    |  Components                                      |
+    |      |                                           |
+    |      v                                           |
+    |  Hooks / Editor State                            |
+    |      |                                           |
+    |      +-----------------------------+             |
+    |      |             |               |             |
+    |      v             v               v             |
+    |    Tools         Layers          Filters          |
+    |      |             |               |             |
+    |      +-------------+---------------+             |
+    |                    |                             |
+    |                    v                             |
+    |             RasterDocument                      |
+    |                    |                             |
+    |                    v                             |
+    |              Canvas Rendering                    |
+    |                    |                             |
+    |                    v                             |
+    |                  Export                          |
+    +--------------------+-----------------------------+
+                         |
+                         | Native operations
+                         v
+    +--------------------------------------------------+
+    |                  Preload                         |
+    |            Controlled Electron API               |
+    +--------------------+-----------------------------+
+                         |
+                         | IPC
+                         v
+    +--------------------------------------------------+
+    |             Electron Main Process                |
+    |                                                  |
+    |       Window / Dialogs / Filesystem              |
+    +--------------------+-----------------------------+
+                         |
+                         v
+    +--------------------------------------------------+
+    |               Operating System                   |
+    +--------------------------------------------------+
+
+---
+
+# Project Structure
+
+The main source structure is:
+
+    EpiGimp/
+    ├── electron/
+    │   ├── main.ts
+    │   └── preload.ts
+    │
+    ├── src/
+    │   ├── components/
+    │   ├── canvas/
+    │   ├── tools/
+    │   ├── layers/
+    │   ├── filters/
+    │   ├── hooks/
+    │   ├── types/
+    │   ├── constants/
+    │   ├── export/
+    │   ├── utils/
+    │   ├── styles/
+    │   ├── assets/
+    │   ├── App.tsx
+    │   └── main.tsx
+    │
+    ├── docs/
+    └── public/
+
+Each directory has a specific responsibility.
+
+---
+
+# Components
+
+The `components/` directory contains the React user interface.
+
+The main editor interface contains elements such as:
+
+    MenuBar
+    Toolbar
+    ToolOptions
+    CanvasWorkspace
+    LayersPanel
+    StatusBar
+
+Components are primarily responsible for:
+
+- displaying application state;
+- receiving user interactions;
+- triggering editor actions.
+
+Image-processing algorithms should not be implemented directly inside UI
+components when they can be separated into their corresponding domain.
+
+---
+
+# Canvas
+
+The `canvas/` domain manages the central raster workspace.
+
+It is responsible for:
+
+- displaying the raster document;
+- rendering the layer composition;
+- handling visual zoom;
+- converting pointer coordinates;
+- providing editing previews;
+- connecting pointer interactions with tools.
+
+The intrinsic raster resolution is kept separate from the visual zoom.
+
+Detailed documentation:
+
+[Canvas System](canvas/README.md)
+
+---
+
+# Tools
+
+The `tools/` domain contains interactive editing operations.
+
+The V1 includes:
+
+- Brush;
+- Eraser;
+- Color Picker;
+- Rectangle Selection;
+- Crop.
+
+Tool algorithms are separated from the React interface.
+
+For example, Brush and Eraser share raster stroke infrastructure while
+keeping their own configuration.
+
+Detailed documentation:
+
+[Editing Tools](tools/README.md)
+
+---
+
+# Layers and Masks
+
+The `layers/` domain manages the multi-layer raster document.
+
+Each layer owns:
+
+- independent `ImageData`;
+- visibility;
+- opacity;
+- an optional mask.
+
+The layer system also handles:
+
+- layer creation;
+- layer composition;
+- masks;
+- layer duplication;
+- ordering;
+- active-layer editing.
+
+Masks and opacity are applied non-destructively during composition.
+
+Detailed documentation:
+
+[Layers and Masks](layers/README.md)
+
+---
+
+# Filters
+
+The `filters/` domain contains reusable raster image-processing
+algorithms.
+
+The V1 provides:
+
+- Grayscale;
+- Invert;
+- Brightness;
+- Contrast;
+- Blur.
+
+Filters operate on the active layer's `ImageData`.
+
+Pixel-processing logic is kept independent from React components and the
+Layers Panel.
+
+Detailed documentation:
+
+[Filters and Pixel Processing](filters/README.md)
+
+---
+
+# Export
+
+The `export/` domain converts the current raster document into standard
+image formats.
+
+The V1 supports:
+
+    PNG
+    JPEG
+
+Export reuses the same layer-composition logic as the editor.
+
+PNG preserves transparency.
+
+JPEG uses a white background because the format does not support
+transparency.
+
+The renderer creates and encodes the image, while Electron handles the
+native Save dialog and filesystem access.
+
+Detailed documentation:
+
+[Image Export](export/README.md)
+
+---
+
+# Hooks and Editor State
+
+The `hooks/` domain separates reusable React state and interaction logic
+from visual components.
+
+Hooks manage responsibilities such as:
+
+- active tool;
+- Brush options;
+- Eraser options;
+- rectangle selection;
+- Undo/Redo history;
+- keyboard shortcuts.
+
+This prevents the main React components from becoming responsible for all
+editor state.
+
+Detailed documentation:
+
+[React Hooks and Editor State](hooks/README.md)
+
+---
+
+# Electron
+
+The `electron/` directory contains the desktop infrastructure.
 
 The architecture separates:
 
-- operating-system access;
-- React UI;
-- raster rendering;
-- editing tools;
-- layers and masks;
-- history;
-- filters;
-- export.
-
-The objective is to keep features independent enough to evolve without
-turning the editor into one large component.
-
-## 2. Global Architecture
-
-```text
-┌───────────────────────────────┐
-│ Electron Main Process         │
-│                               │
-│ Window lifecycle              │
-│ Native Open / Save dialogs    │
-│ File read / write             │
-└───────────────┬───────────────┘
-                │ IPC
-                ▼
-┌───────────────────────────────┐
-│ Preload Layer                 │
-│                               │
-│ contextBridge                 │
-│ Controlled renderer API       │
-└───────────────┬───────────────┘
-                │ window.electronAPI
-                ▼
-┌───────────────────────────────┐
-│ React Renderer                │
-│                               │
-│ UI / Canvas / Editing         │
-│ Layers / Masks / Filters      │
-│ History / Export              │
-└───────────────────────────────┘
-```
-
-The renderer does not directly access unrestricted Node.js or Electron
-APIs.
-
-## 3. Electron Layer
-
-```text
-electron/
-├── main.ts
-├── preload.ts
-└── package.json
-```
-
-### Main process
-
-`main.ts` owns desktop-specific operations:
-
-- create the main `BrowserWindow`;
-- load the Vite renderer in development;
-- load `dist/index.html` in production;
-- open the native image selection dialog;
-- read imported image files;
-- open the native Save dialog;
-- write exported PNG/JPEG bytes;
-- manage the Electron application lifecycle.
-
-Security configuration includes:
-
-```ts
-contextIsolation: true
-nodeIntegration: false
-```
-
-### Preload
-
-`preload.ts` exposes a limited API through `contextBridge`.
-
-The application follows:
-
-```text
-React
-  ↓
-window.electronAPI
-  ↓
-preload.ts
-  ↓
-ipcRenderer
-  ↓
-ipcMain
-  ↓
-Electron / Node.js
-```
-
-This is used for native image opening and export saving.
-
-## 4. Renderer Structure
-
-```text
-src/
-├── canvas/
-├── components/
-├── constants/
-├── export/
-├── filters/
-├── hooks/
-├── layers/
-├── styles/
-├── tools/
-├── types/
-├── utils/
-├── App.tsx
-└── main.tsx
-```
+    Renderer
+        |
+        v
+    Preload
+        |
+        v
+    Main Process
+        |
+        v
+    Operating System
+
+The renderer handles the editor and raster processing.
+
+The main process handles privileged native operations such as:
+
+- file dialogs;
+- filesystem access;
+- application window management.
+
+The preload script provides a controlled API between both environments.
+
+Detailed documentation:
+
+[Electron Architecture](electron/README.md)
+
+---
+
+# Raster Document
+
+The central editor data structure is the raster document.
+
+Conceptually:
+
+    RasterDocument
+        |
+        +-- id
+        +-- name
+        +-- width
+        +-- height
+        +-- activeLayerId
+        |
+        +-- layers
+              |
+              +-- Layer
+              |     |
+              |     +-- ImageData
+              |     +-- visibility
+              |     +-- opacity
+              |     +-- optional mask
+              |
+              +-- Layer
+              |
+              +-- ...
+
+The document is the source of truth for the raster image being edited.
+
+---
+
+# Rendering Pipeline
+
+The visible editor image is produced from the layer stack.
+
+The rendering pipeline is:
+
+    RasterDocument
+          |
+          v
+    Layer Stack
+          |
+          v
+    Visibility
+          |
+          v
+    Masks
+          |
+          v
+    Opacity
+          |
+          v
+    compositeLayers()
+          |
+          v
+    Canvas
+
+The same composition logic is reused for export.
+
+---
+
+# Editing Pipeline
+
+A typical editing operation follows:
+
+    User Interaction
+          |
+          v
+    React Component
+          |
+          v
+    Editor Action / Hook
+          |
+          v
+    Tool or Filter
+          |
+          v
+    Active Layer ImageData
+          |
+          v
+    Updated RasterDocument
+          |
+          v
+    Layer Composition
+          |
+          v
+    Canvas Re-render
 
-### `components/`
+This keeps user interaction separate from low-level raster processing.
 
-Contains the editor UI:
+---
 
-- editor layout;
-- menu bar;
-- toolbar;
-- tool options;
-- layers panel;
-- status bar;
-- new-document dialog.
+# History
 
-Components coordinate user interaction but domain-specific algorithms
-are kept outside the UI when possible.
+Destructive document changes integrate with the Undo/Redo history system.
 
-### `canvas/`
+Before a logical editing operation changes the document, the previous
+state can be preserved.
 
-Contains the Canvas workspace and coordinate conversion.
+Conceptually:
 
-The HTML5 Canvas is the raster rendering surface. Display zoom changes
-the visual scale without changing the intrinsic document resolution.
+    Previous Document
+          |
+          v
+    History Snapshot
+          |
+          v
+    Editing Operation
+          |
+          v
+    Updated Document
 
-### `tools/`
+Because `ImageData` contains mutable raster information, independent
+copies are required where historical states must remain unchanged.
 
-Contains editing tools and their shared definitions.
+---
 
-v1.0 tools include:
+# Native Operations
 
-- Brush
-- Eraser
-- Color Picker
-- Rectangle Selection
+Operations requiring operating-system access follow a different path.
 
-Crop uses the current rectangle selection.
+For example, image export uses:
 
-### `layers/`
+    React
+      |
+      v
+    Export Image
+      |
+      v
+    Preload API
+      |
+      v
+    Electron IPC
+      |
+      v
+    Main Process
+      |
+      v
+    Save Dialog
+      |
+      v
+    Filesystem
 
-Contains the layer and mask domain.
+This prevents raster-processing modules from directly depending on
+operating-system APIs.
 
-A layer stores:
+---
 
-- identifier;
-- name;
-- raster `ImageData`;
-- visibility;
-- opacity;
-- optional mask.
+# Design Principles
 
-`compositeLayers()` is the shared composition function. It:
+## Modular Responsibilities
 
-1.  clears the destination canvas;
-2.  ignores hidden layers;
-3.  creates a temporary render copy for each visible layer;
-4.  applies the enabled mask non-destructively;
-5.  applies layer opacity;
-6.  draws the layer into the final composition.
+Each domain has a clear purpose.
 
-The original layer pixels are not modified when a mask is rendered.
+Raster processing, UI state and operating-system operations are kept
+separate.
 
-This composition logic is reused by the editor and export path so
-exported images match the visible editor composition.
+## Small Functions
 
-### `filters/`
+Functions should focus on one clear responsibility whenever possible.
 
-Contains image-processing algorithms independently from React.
+Large functions containing unrelated behaviors are avoided.
+
+## Explicit Naming
 
-Pixel-local filters use a reusable processing engine that reads/writes
-`ImageData`.
-
-v1.0 filters:
-
-- Grayscale
-- Invert
-- Brightness
-- Contrast
-- Blur
-
-Grayscale, invert, brightness and contrast use the shared
-pixel-processing path. Blur uses neighboring pixels and therefore has
-its own raster traversal while following the same non-UI architecture.
-
-Filters operate on the active layer and preserve alpha.
-
-### `export/`
-
-Contains renderer-side image export preparation.
-
-Export flow:
-
-```text
-RasterDocument
-      ↓
-compositeLayers()
-      ↓
-offscreen Canvas
-      ↓
-PNG / JPEG encoding
-      ↓
-byte array
-      ↓
-window.electronAPI
-      ↓
-native Save dialog
-      ↓
-file
-```
-
-PNG keeps transparent pixels.
-
-For JPEG, EpiGimp first creates the transparent composition, then draws
-it over a white background on a second canvas before JPEG encoding. This
-is necessary because JPEG does not support alpha transparency.
-
-### `hooks/`
-
-Contains reusable React state/behavior.
-
-The v1.0 architecture includes hooks for:
-
-- raster document state;
-- zoom;
-- active tool;
-- brush options;
-- eraser options;
-- selection;
-- Undo / Redo history;
-- keyboard shortcuts.
-
-History stores document snapshots and deep-copies mutable raster data,
-including layer and mask `ImageData`.
-
-### `types/`
-
-Contains shared TypeScript definitions such as `RasterDocument` and the
-typed `window.electronAPI`.
-
-### `constants/`
-
-Contains shared application constants such as document/zoom constraints.
-
-### `utils/`
-
-Contains reusable helpers that do not belong to a more specific domain,
-including raster-document creation and image loading.
-
-## 5. Raster Document Model
-
-A raster document contains:
-
-```text
-RasterDocument
-├── id
-├── name
-├── width
-├── height
-├── layers[]
-└── activeLayerId
-```
-
-Each layer owns its raster pixels. Editing operations target the active
-layer.
-
-This means adding a new layer does not flatten the document.
-
-## 6. Masks
-
-Masks are stored independently from layer pixels.
-
-A mask contains its own `ImageData` and an enabled state.
-
-During rendering, the mask controls the rendered alpha of the layer. The
-source raster remains unchanged, making the operation non-destructive.
-
-Layer duplication and history snapshots deep-copy mask pixels to prevent
-shared mutable mask data.
-
-## 7. History
-
-Undo / Redo is document-based.
-
-Before a mutating operation, the current document state is registered in
-history. Raster buffers are deep-copied so later modifications cannot
-mutate older history states.
-
-History covers core editing operations including drawing, layers, masks,
-crop and filters.
-
-## 8. Filter Engine
-
-Pixel-local filters share a reusable processor:
-
-```text
-ImageData
-   ↓
-read pixel
-   ↓
-filter function
-   ↓
-write pixel
-   ↓
-new ImageData
-```
-
-The source `ImageData` is copied before processing.
-
-This allows new pixel-local filters to be introduced without redesigning
-the filter system.
-
-Blur is handled separately because its output pixel depends on
-neighboring source pixels.
-
-## 9. Styling
-
-```text
-styles/
-├── tokens.css
-├── reset.css
-└── global.css
-```
-
-`tokens.css` is the single source for shared visual values:
-
-- colors;
-- typography;
-- spacing;
-- radii;
-- layout dimensions;
-- z-index values.
-
-Component CSS consumes these variables rather than duplicating shared
-values.
-
-## 10. Keyboard Shortcuts
-
-Keyboard handling is centralized in a dedicated React hook rather than
-being distributed across menu components.
-
-v1.0 shortcuts:
-
-```text
-Ctrl+N          New
-Ctrl+O          Open
-Ctrl+Z          Undo
-Ctrl+Shift+Z    Redo
-Ctrl+Shift+P    Export PNG
-Ctrl+Shift+J    Export JPEG
-```
-
-Global shortcuts are ignored when the user is typing in an editable
-field.
-
-## 11. Development and Production
-
-Development:
-
-```text
-Electron
-  ↓
-VITE_DEV_SERVER_URL
-  ↓
-http://localhost:5173
-  ↓
-Vite / React
-```
-
-Production:
-
-```text
-Electron
-  ↓
-loadFile()
-  ↓
-dist/index.html
-```
-
-Electron TypeScript is compiled into `dist-electron/`.
-
-## 12. Security
-
-The v1.0 desktop architecture uses:
-
-- context isolation;
-- disabled Node integration in the renderer;
-- controlled preload APIs;
-- Content Security Policy;
-- explicit IPC operations.
-
-The renderer never receives unrestricted Node.js filesystem access.
-
-## 13. Architectural Principles
-
-EpiGimp follows these rules:
-
-1.  One clear responsibility per function/module.
-2.  Small readable functions over large multi-purpose functions.
-3.  Reuse shared logic rather than duplicate it.
-4.  Keep UI separate from image-processing logic.
-5.  Keep OS access behind the preload bridge.
-6.  Keep layer/mask logic in the layer domain.
-7.  Centralize shared constants and design tokens.
-8.  Deep-copy mutable raster data when state independence is required.
-9.  Avoid unnecessary abstraction.
-10. Extend existing engines rather than redesigning them for each
-    feature.
+Functions, variables and types use descriptive names so their purpose can
+be understood without relying on implementation details.
+
+## Shared Logic
+
+Common behavior is centralized when several features require the same
+operation.
+
+Examples include:
+
+    compositeLayers()
+    drawStroke()
+    shared pixel processing
+    coordinate conversion
+
+## Independent Raster Data
+
+Layers own independent `ImageData`.
+
+Deep copies are used where mutable raster data must not be shared, such as
+layer duplication and history snapshots.
+
+## Non-Destructive Rendering Properties
+
+Layer opacity and masks affect rendering without permanently modifying the
+original raster pixels.
+
+## UI / Logic Separation
+
+React components trigger actions but image-processing algorithms remain in
+their corresponding domains.
+
+## Secure Electron Boundary
+
+The renderer does not receive unrestricted Node.js access.
+
+Native functionality is exposed through the preload bridge and explicit
+IPC operations.
+
+---
+
+# Detailed Technical Documentation
+
+The V1 architecture is documented by domain:
+
+| Domain | Documentation |
+| --- | --- |
+| Canvas | [Canvas System](canvas/README.md) |
+| Tools | [Editing Tools](tools/README.md) |
+| Layers | [Layers and Masks](layers/README.md) |
+| Filters | [Filters and Pixel Processing](filters/README.md) |
+| Export | [Image Export](export/README.md) |
+| Hooks | [React Hooks and Editor State](hooks/README.md) |
+| Electron | [Electron Architecture](electron/README.md) |
+
+These documents describe the internal behavior, design decisions and
+interactions of each major subsystem.
+
+---
+
+# V1 Architecture Summary
+
+The EpiGimp V1 architecture can be summarized as:
+
+    UI
+     |
+     v
+    Hooks / State
+     |
+     +--------------------+
+     |         |          |
+     v         v          v
+    Tools    Filters    Layers
+     |         |          |
+     +---------+----------+
+               |
+               v
+        RasterDocument
+               |
+               v
+        Layer Composition
+               |
+         +-----+-----+
+         |           |
+         v           v
+       Canvas      Export
+                     |
+                     v
+                  Preload
+                     |
+                     v
+                    IPC
+                     |
+                     v
+              Electron Main
+                     |
+                     v
+              Operating System
+
+This structure provides the foundation for the V1 editor while leaving
+room for future features such as advanced selections, transformations,
+project persistence, autosave and recovery.
