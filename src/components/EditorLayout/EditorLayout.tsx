@@ -22,6 +22,12 @@ import StatusBar from '../StatusBar/StatusBar'
 import Toolbar from '../Toolbar/Toolbar'
 import ToolOptions from '../ToolOptions/ToolOptions'
 
+import { applyBlur } from '../../filters/blur'
+import { applyBrightness } from '../../filters/brightness'
+import { applyContrast } from '../../filters/contrast'
+import { applyGrayscale } from '../../filters/grayscale'
+import { applyInvert } from '../../filters/invert'
+
 import './EditorLayout.css'
 
 function EditorLayout() {
@@ -222,6 +228,49 @@ function EditorLayout() {
     clearSelection()
   }
 
+  const handleFilter = (filter: (imageData: ImageData) => ImageData): void => {
+    if (!document) {
+      return
+    }
+
+    const activeLayer = document.layers.find((layer) => layer.id === document.activeLayerId)
+
+    if (!activeLayer) {
+      return
+    }
+
+    pushHistory(document)
+    updateDocumentImageData(filter(activeLayer.imageData))
+  }
+
+  const handleGrayscale = (): void => {
+    handleFilter(applyGrayscale)
+  }
+
+  const handleInvert = (): void => {
+    handleFilter(applyInvert)
+  }
+
+  const handleBrightnessIncrease = (): void => {
+    handleFilter((imageData) => applyBrightness(imageData, 20))
+  }
+
+  const handleBrightnessDecrease = (): void => {
+    handleFilter((imageData) => applyBrightness(imageData, -20))
+  }
+
+  const handleContrastIncrease = (): void => {
+    handleFilter((imageData) => applyContrast(imageData, 20))
+  }
+
+  const handleContrastDecrease = (): void => {
+    handleFilter((imageData) => applyContrast(imageData, -20))
+  }
+
+  const handleBlur = (): void => {
+    handleFilter((imageData) => applyBlur(imageData, 3))
+  }
+
   const handleUndo = (): void => {
     if (!document) {
       return
@@ -263,8 +312,16 @@ function EditorLayout() {
         onOpenImage={openDocument}
         onUndo={handleUndo}
         onRedo={handleRedo}
+        onGrayscale={handleGrayscale}
+        onInvert={handleInvert}
+        onBrightnessIncrease={handleBrightnessIncrease}
+        onBrightnessDecrease={handleBrightnessDecrease}
+        onContrastIncrease={handleContrastIncrease}
+        onContrastDecrease={handleContrastDecrease}
+        onBlur={handleBlur}
         canUndo={canUndo}
         canRedo={canRedo}
+        canApplyFilter={document !== null}
       />
 
       <ToolOptions
