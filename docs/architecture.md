@@ -2,67 +2,56 @@
 
 ## 1. Overview
 
-EpiGimp is a desktop raster graphics editor built with **Electron, React, TypeScript and HTML5 Canvas**.
+EpiGimp v1.0 is a desktop raster graphics editor built with **Electron,
+React, TypeScript and HTML5 Canvas**.
 
-The application is designed around a modular architecture in order to keep the codebase readable, maintainable and extensible as new editing features are introduced.
+The architecture separates:
 
-The architecture separates four main responsibilities:
+- operating-system access;
+- React UI;
+- raster rendering;
+- editing tools;
+- layers and masks;
+- history;
+- filters;
+- export.
 
-- Desktop and operating-system interactions
-- User interface
-- Image rendering and editing logic
-- Shared application resources and utilities
-
-This separation is especially important for features such as drawing tools, layers, masks, filters and history, which will progressively increase the complexity of the application.
-
----
+The objective is to keep features independent enough to evolve without
+turning the editor into one large component.
 
 ## 2. Global Architecture
 
-EpiGimp uses Electron to provide the desktop environment and React to build the graphical interface.
-
-The communication architecture is:
-
 ```text
-┌──────────────────────────────────┐
-│        Electron Main Process     │
-│                                  │
-│  Window management               │
-│  Native desktop operations       │
-│  Application lifecycle           │
-└────────────────┬─────────────────┘
-                 │
-                 │ IPC
-                 │
-┌────────────────▼─────────────────┐
-│           Preload Layer          │
-│                                  │
-│  contextBridge                   │
-│  Controlled Electron APIs        │
-└────────────────┬─────────────────┘
-                 │
-                 │ window.electronAPI
-                 │
-┌────────────────▼─────────────────┐
-│         React Renderer           │
-│                                  │
-│  User interface                  │
-│  Canvas workspace                │
-│  Editing tools                   │
-│  Layers                          │
-│  Filters                         │
-└──────────────────────────────────┘
+┌───────────────────────────────┐
+│ Electron Main Process         │
+│                               │
+│ Window lifecycle              │
+│ Native Open / Save dialogs    │
+│ File read / write             │
+└───────────────┬───────────────┘
+                │ IPC
+                ▼
+┌───────────────────────────────┐
+│ Preload Layer                 │
+│                               │
+│ contextBridge                 │
+│ Controlled renderer API       │
+└───────────────┬───────────────┘
+                │ window.electronAPI
+                ▼
+┌───────────────────────────────┐
+│ React Renderer                │
+│                               │
+│ UI / Canvas / Editing         │
+│ Layers / Masks / Filters      │
+│ History / Export              │
+└───────────────────────────────┘
 ```
 
-The renderer never directly accesses Node.js or Electron APIs.
+The renderer does not directly access unrestricted Node.js or Electron
+APIs.
 
-Native functionality must be exposed through the preload layer using controlled APIs.
-
----
-
-## 3. Electron Architecture
-
-Electron-related code is isolated from the React application.
+## 3. Electron Layer
 
 ```text
 electron/
@@ -71,36 +60,31 @@ electron/
 └── package.json
 ```
 
-### `main.ts`
+### Main process
 
-The Electron main process is responsible for the desktop application lifecycle.
+`main.ts` owns desktop-specific operations:
 
-Its current responsibilities include:
+- create the main `BrowserWindow`;
+- load the Vite renderer in development;
+- load `dist/index.html` in production;
+- open the native image selection dialog;
+- read imported image files;
+- open the native Save dialog;
+- write exported PNG/JPEG bytes;
+- manage the Electron application lifecycle.
 
-- Creating the main `BrowserWindow`
-- Configuring Electron security options
-- Loading the React renderer
-- Handling IPC requests
-- Managing application startup and shutdown
-
-The window is configured with:
+Security configuration includes:
 
 ```ts
 contextIsolation: true
 nodeIntegration: false
 ```
 
-This prevents the React renderer from directly accessing Node.js APIs.
+### Preload
 
-### `preload.ts`
+`preload.ts` exposes a limited API through `contextBridge`.
 
-The preload script acts as a controlled bridge between the renderer and the Electron main process.
-
-It uses Electron's `contextBridge` to expose only explicitly authorized functionality.
-
-The current architecture exposes a small `ping` API used to validate IPC communication.
-
-This test confirmed the complete communication path:
+The application follows:
 
 ```text
 React
@@ -113,23 +97,19 @@ ipcRenderer
   ↓
 ipcMain
   ↓
-Electron main process
+Electron / Node.js
 ```
 
-As the application evolves, this bridge will expose real desktop operations such as file opening and saving.
+This is used for native image opening and export saving.
 
----
-
-## 4. Renderer Architecture
-
-The renderer contains the React application and the graphics editor itself.
+## 4. Renderer Structure
 
 ```text
 src/
-├── assets/
 ├── canvas/
 ├── components/
 ├── constants/
+├── export/
 ├── filters/
 ├── hooks/
 ├── layers/
@@ -141,77 +121,76 @@ src/
 └── main.tsx
 ```
 
-Each directory has a specific responsibility.
-
 ### `components/`
 
-Contains reusable React UI components.
+Contains the editor UI:
 
-Examples may include:
+- editor layout;
+- menu bar;
+- toolbar;
+- tool options;
+- layers panel;
+- status bar;
+- new-document dialog.
 
-- Toolbars
-- Sidebars
-- Menus
-- Buttons
-- Dialogs
-- Panels
-
-Components should primarily handle presentation and user interaction.
-
-Complex editing logic should not be implemented directly inside UI components.
+Components coordinate user interaction but domain-specific algorithms
+are kept outside the UI when possible.
 
 ### `canvas/`
 
-Contains the Canvas workspace and rendering-related logic.
+Contains the Canvas workspace and coordinate conversion.
 
-This module will progressively handle responsibilities such as:
-
-- Canvas rendering
-- Coordinate conversion
-- Zoom and navigation
-- Image rendering
-- Layer composition
-- Interaction between editing tools and the displayed document
-
-Rendering logic should remain separated from generic UI components.
+The HTML5 Canvas is the raster rendering surface. Display zoom changes
+the visual scale without changing the intrinsic document resolution.
 
 ### `tools/`
 
-Contains editing tool implementations.
+Contains editing tools and their shared definitions.
 
-Examples include:
+v1.0 tools include:
 
 - Brush
 - Eraser
-- Color picker
-- Selection tools
+- Color Picker
+- Rectangle Selection
 
-Each tool should encapsulate its own editing behavior whenever possible.
-
-This allows new tools to be introduced without increasing the complexity of the main Canvas component.
+Crop uses the current rectangle selection.
 
 ### `layers/`
 
-Contains the layer system.
+Contains the layer and mask domain.
 
-This module will manage concepts such as:
+A layer stores:
 
-- Layer creation
-- Layer deletion
-- Layer ordering
-- Visibility
-- Opacity
-- Active layer
-- Layer composition
-- Layer masks
+- identifier;
+- name;
+- raster `ImageData`;
+- visibility;
+- opacity;
+- optional mask.
 
-Layer-specific logic should remain inside this domain instead of being distributed across UI components.
+`compositeLayers()` is the shared composition function. It:
+
+1.  clears the destination canvas;
+2.  ignores hidden layers;
+3.  creates a temporary render copy for each visible layer;
+4.  applies the enabled mask non-destructively;
+5.  applies layer opacity;
+6.  draws the layer into the final composition.
+
+The original layer pixels are not modified when a mask is rendered.
+
+This composition logic is reused by the editor and export path so
+exported images match the visible editor composition.
 
 ### `filters/`
 
-Contains image-processing algorithms.
+Contains image-processing algorithms independently from React.
 
-Examples may include:
+Pixel-local filters use a reusable processing engine that reads/writes
+`ImageData`.
+
+v1.0 filters:
 
 - Grayscale
 - Invert
@@ -219,80 +198,141 @@ Examples may include:
 - Contrast
 - Blur
 
-Filters should operate on image data independently from the React interface whenever possible.
+Grayscale, invert, brightness and contrast use the shared
+pixel-processing path. Blur uses neighboring pixels and therefore has
+its own raster traversal while following the same non-UI architecture.
 
-This makes image-processing logic easier to understand, reuse and test.
+Filters operate on the active layer and preserve alpha.
+
+### `export/`
+
+Contains renderer-side image export preparation.
+
+Export flow:
+
+```text
+RasterDocument
+      ↓
+compositeLayers()
+      ↓
+offscreen Canvas
+      ↓
+PNG / JPEG encoding
+      ↓
+byte array
+      ↓
+window.electronAPI
+      ↓
+native Save dialog
+      ↓
+file
+```
+
+PNG keeps transparent pixels.
+
+For JPEG, EpiGimp first creates the transparent composition, then draws
+it over a white background on a second canvas before JPEG encoding. This
+is necessary because JPEG does not support alpha transparency.
 
 ### `hooks/`
 
-Contains reusable React-specific logic through custom hooks.
+Contains reusable React state/behavior.
 
-Hooks should only be created when React behavior needs to be shared or isolated.
+The v1.0 architecture includes hooks for:
 
-The existence of this directory does not mean that every piece of logic should become a hook.
+- raster document state;
+- zoom;
+- active tool;
+- brush options;
+- eraser options;
+- selection;
+- Undo / Redo history;
+- keyboard shortcuts.
+
+History stores document snapshots and deep-copies mutable raster data,
+including layer and mask `ImageData`.
 
 ### `types/`
 
-Contains shared TypeScript definitions.
-
-The current `electron.d.ts` file defines the API exposed to the renderer through:
-
-```ts
-window.electronAPI
-```
-
-Future shared types may include document, layer, tool and filter definitions.
-
-Shared concepts should have a single TypeScript definition rather than being redefined by individual modules.
+Contains shared TypeScript definitions such as `RasterDocument` and the
+typed `window.electronAPI`.
 
 ### `constants/`
 
-Contains shared application constants.
-
-Examples may include:
-
-```ts
-DEFAULT_ZOOM
-MIN_ZOOM
-MAX_ZOOM
-DEFAULT_BRUSH_SIZE
-```
-
-Values used by multiple modules should be defined once and imported where required.
-
-This avoids duplicated values and unexplained magic numbers throughout the codebase.
+Contains shared application constants such as document/zoom constraints.
 
 ### `utils/`
 
-Contains small reusable utilities that are not specific to one application domain.
+Contains reusable helpers that do not belong to a more specific domain,
+including raster-document creation and image loading.
 
-Examples may include:
+## 5. Raster Document Model
 
-- Color conversions
-- Generic validation
-- Coordinate helpers
-
-The `utils` directory must not become a collection of unrelated application logic.
-
-If a helper belongs specifically to layers, tools or filters, it should remain inside that module.
-
-### `assets/`
-
-Contains static resources used by the application.
+A raster document contains:
 
 ```text
-assets/
-├── icons/
-└── images/
+RasterDocument
+├── id
+├── name
+├── width
+├── height
+├── layers[]
+└── activeLayerId
 ```
 
-This may include application icons, SVG resources and other visual assets.
+Each layer owns its raster pixels. Editing operations target the active
+layer.
 
----
+This means adding a new layer does not flatten the document.
 
-## 5. Styling Architecture
+## 6. Masks
 
-Global styling is separated into three files:
+Masks are stored independently from layer pixels.
+
+A mask contains its own `ImageData` and an enabled state.
+
+During rendering, the mask controls the rendered alpha of the layer. The
+source raster remains unchanged, making the operation non-destructive.
+
+Layer duplication and history snapshots deep-copy mask pixels to prevent
+shared mutable mask data.
+
+## 7. History
+
+Undo / Redo is document-based.
+
+Before a mutating operation, the current document state is registered in
+history. Raster buffers are deep-copied so later modifications cannot
+mutate older history states.
+
+History covers core editing operations including drawing, layers, masks,
+crop and filters.
+
+## 8. Filter Engine
+
+Pixel-local filters share a reusable processor:
+
+```text
+ImageData
+   ↓
+read pixel
+   ↓
+filter function
+   ↓
+write pixel
+   ↓
+new ImageData
+```
+
+The source `ImageData` is copied before processing.
+
+This allows new pixel-local filters to be introduced without redesigning
+the filter system.
+
+Blur is handled separately because its output pixel depends on
+neighboring source pixels.
+
+## 9. Styling
 
 ```text
 styles/
@@ -301,271 +341,87 @@ styles/
 └── global.css
 ```
 
-### `tokens.css`
+`tokens.css` is the single source for shared visual values:
 
-Contains the shared design tokens used throughout EpiGimp.
+- colors;
+- typography;
+- spacing;
+- radii;
+- layout dimensions;
+- z-index values.
 
-These include:
+Component CSS consumes these variables rather than duplicating shared
+values.
 
-- Colors
-- Typography
-- Font sizes
-- Font weights
-- Spacing
-- Border radii
-- Layout dimensions
-- Z-index levels
+## 10. Keyboard Shortcuts
 
-For example:
+Keyboard handling is centralized in a dedicated React hook rather than
+being distributed across menu components.
 
-```css
---color-bg-panel: #27272a;
---font-size-md: 1rem;
---spacing-sm: 0.5rem;
+v1.0 shortcuts:
+
+```text
+Ctrl+N          New
+Ctrl+O          Open
+Ctrl+Z          Undo
+Ctrl+Shift+Z    Redo
+Ctrl+Shift+P    Export PNG
+Ctrl+Shift+J    Export JPEG
 ```
 
-Components consume these variables instead of duplicating their values:
+Global shortcuts are ignored when the user is typing in an editable
+field.
 
-```css
-background: var(--color-bg-panel);
-padding: var(--spacing-sm);
-```
+## 11. Development and Production
 
-This provides a single source of truth for the EpiGimp visual system.
-
-### `reset.css`
-
-Normalizes browser default styles and provides a predictable base for the interface.
-
-It handles elements such as:
-
-- Box sizing
-- Default margins
-- Form control typography
-- Image behavior
-
-It does not define the visual identity of EpiGimp.
-
-### `global.css`
-
-Defines application-wide visual behavior.
-
-It consumes values from `tokens.css` for properties such as:
-
-- Application background
-- Text color
-- Typography
-- Global font rendering
-
-Styles specific to individual components should remain close to those components rather than being added to `global.css`.
-
----
-
-## 6. Development and Production Rendering
-
-EpiGimp supports two renderer-loading modes.
-
-### Development
-
-During development, Vite provides the React application through a local development server.
+Development:
 
 ```text
 Electron
-    ↓
+  ↓
 VITE_DEV_SERVER_URL
-    ↓
+  ↓
 http://localhost:5173
-    ↓
-React
+  ↓
+Vite / React
 ```
 
-This provides development features such as Hot Module Replacement.
-
-### Production
-
-A production build does not depend on the Vite development server.
-
-Vite generates the renderer into:
-
-```text
-dist/
-```
-
-Electron then loads:
-
-```text
-dist/index.html
-```
-
-directly from the filesystem.
+Production:
 
 ```text
 Electron
-    ↓
+  ↓
 loadFile()
-    ↓
+  ↓
 dist/index.html
-    ↓
-React production build
 ```
 
-The renderer-loading logic is isolated in `loadRenderer()` so that window creation and environment-specific loading remain separate responsibilities.
+Electron TypeScript is compiled into `dist-electron/`.
 
-The Vite configuration uses a relative base path to allow generated assets to work correctly when loaded through the filesystem.
+## 12. Security
 
----
+The v1.0 desktop architecture uses:
 
-## 7. Security
+- context isolation;
+- disabled Node integration in the renderer;
+- controlled preload APIs;
+- Content Security Policy;
+- explicit IPC operations.
 
-EpiGimp follows Electron security principles from the beginning of development.
+The renderer never receives unrestricted Node.js filesystem access.
 
-### Context Isolation
+## 13. Architectural Principles
 
-Electron context isolation is enabled:
+EpiGimp follows these rules:
 
-```ts
-contextIsolation: true
-```
-
-The preload environment and the renderer therefore execute in isolated JavaScript contexts.
-
-### Node Integration
-
-Direct Node.js integration inside the renderer is disabled:
-
-```ts
-nodeIntegration: false
-```
-
-React components cannot directly access Node.js APIs.
-
-### Controlled IPC
-
-Desktop functionality is exposed through the preload layer rather than exposing Electron directly to the renderer.
-
-Only explicitly defined operations should become available through `window.electronAPI`.
-
-### Content Security Policy
-
-The renderer defines a Content Security Policy to restrict the resources that can be loaded or executed.
-
-Development connections to the local Vite server are explicitly allowed.
-
-Image-related sources such as `data:` and `blob:` are supported because EpiGimp is an image-editing application.
-
-The policy can be further restricted for packaged production releases as the project evolves.
-
----
-
-## 8. Development Principles
-
-The project follows several architectural principles.
-
-### Single Responsibility
-
-Functions, modules and components should have one clear responsibility.
-
-Large functions containing unrelated operations should be separated into smaller functions with meaningful names.
-
-For example, instead of combining pointer handling, coordinate conversion, drawing, layer modification and history management in a single function, these responsibilities should be separated.
-
-### DRY — Don't Repeat Yourself
-
-Shared logic and values should not be duplicated.
-
-Common values belong in:
-
-```text
-constants/
-styles/tokens.css
-```
-
-Reusable logic should be extracted when multiple parts of the application require the same behavior.
-
-### Separation of Concerns
-
-The following responsibilities should remain separated:
-
-```text
-UI
-│
-Editing logic
-│
-Canvas rendering
-│
-Image processing
-│
-Desktop / OS access
-```
-
-For example, a toolbar button may activate the Brush tool, but the toolbar component should not implement the brush drawing algorithm itself.
-
-### Readability
-
-Code should prioritize clarity over compactness.
-
-Functions should remain reasonably short and use descriptive names.
-
-Complex behavior should be decomposed into understandable operations.
-
-### Reusability
-
-Generic functionality should be designed so that it can be reused when appropriate.
-
-However, code should only be generalized when a real reusable responsibility exists.
-
-### Avoid Over-Modularization
-
-Modularity should not result in unnecessary fragmentation.
-
-Related functions can remain together when they belong to the same responsibility.
-
-For example:
-
-```text
-utils/color.ts
-```
-
-may contain:
-
-```text
-hexToRgb()
-rgbToHex()
-clampColor()
-```
-
-Creating one file for every small function would reduce readability rather than improve it.
-
-The goal is therefore:
-
-> Separate code by responsibility, not simply by line count.
-
----
-
-## 9. Architecture Evolution
-
-The architecture is intentionally designed to evolve with the EpiGimp roadmap.
-
-The current foundation prepares the project for upcoming modules such as:
-
-```text
-Canvas
-  ↓
-Drawing tools
-  ↓
-Selections
-  ↓
-Layers
-  ↓
-Masks
-  ↓
-Filters
-  ↓
-History
-  ↓
-Project persistence
-```
-
-New functionality should extend the relevant domain rather than forcing major changes to the global architecture.
-
-Architectural decisions may evolve during development when new requirements justify them. Any significant architectural change should be reflected in this document.
+1.  One clear responsibility per function/module.
+2.  Small readable functions over large multi-purpose functions.
+3.  Reuse shared logic rather than duplicate it.
+4.  Keep UI separate from image-processing logic.
+5.  Keep OS access behind the preload bridge.
+6.  Keep layer/mask logic in the layer domain.
+7.  Centralize shared constants and design tokens.
+8.  Deep-copy mutable raster data when state independence is required.
+9.  Avoid unnecessary abstraction.
+10. Extend existing engines rather than redesigning them for each
+    feature.

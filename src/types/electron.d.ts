@@ -18,6 +18,7 @@ declare global {
       ping: () => Promise<string>
       openImage: () => Promise<string | null>
       readImage: (filePath: string) => Promise<ImageFileData>
+      saveImage: (data: number[], format: 'png' | 'jpeg') => Promise<boolean>
     }
   }
 }

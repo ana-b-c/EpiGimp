@@ -14,6 +14,8 @@ const MENU_ITEMS = ['View'] as const
 interface MenuBarProps {
   onNewDocument: () => void
   onOpenImage: () => void
+  onExportPng: () => void
+  onExportJpeg: () => void
   onUndo: () => void
   onRedo: () => void
   onGrayscale: () => void
@@ -25,12 +27,14 @@ interface MenuBarProps {
   onBlur: () => void
   canUndo: boolean
   canRedo: boolean
-  canApplyFilter: boolean
+  hasDocument: boolean
 }
 
 function MenuBar({
   onNewDocument,
   onOpenImage,
+  onExportPng,
+  onExportJpeg,
   onUndo,
   onRedo,
   onGrayscale,
@@ -42,7 +46,7 @@ function MenuBar({
   onBlur,
   canUndo,
   canRedo,
-  canApplyFilter,
+  hasDocument,
 }: MenuBarProps) {
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false)
   const [isEditMenuOpen, setIsEditMenuOpen] = useState(false)
@@ -92,11 +96,27 @@ function MenuBar({
         {isFileMenuOpen && (
           <div className="menu-bar__dropdown">
             <button type="button" onClick={() => handleAction(onNewDocument)}>
-              New
+              <span>New</span>
+              <span className="menu-shortcut">Ctrl+N</span>
             </button>
 
             <button type="button" onClick={() => handleAction(onOpenImage)}>
-              Open
+              <span>Open</span>
+              <span className="menu-shortcut">Ctrl+O</span>
+            </button>
+
+            <button type="button" disabled={!hasDocument} onClick={() => handleAction(onExportPng)}>
+              <span>Export PNG</span>
+              <span className="menu-shortcut">Ctrl+Shift+P</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={!hasDocument}
+              onClick={() => handleAction(onExportJpeg)}
+            >
+              <span>Export JPEG</span>
+              <span className="menu-shortcut">Ctrl+Shift+J</span>
             </button>
           </div>
         )}
@@ -115,11 +135,13 @@ function MenuBar({
         {isEditMenuOpen && (
           <div className="menu-bar__dropdown">
             <button type="button" disabled={!canUndo} onClick={() => handleAction(onUndo)}>
-              Undo
+              <span>Undo</span>
+              <span className="menu-shortcut">Ctrl+Z</span>
             </button>
 
             <button type="button" disabled={!canRedo} onClick={() => handleAction(onRedo)}>
-              Redo
+              <span>Redo</span>
+              <span className="menu-shortcut">Ctrl+Shift+Z</span>
             </button>
           </div>
         )}
@@ -141,21 +163,17 @@ function MenuBar({
 
         {isFiltersMenuOpen && (
           <div className="menu-bar__dropdown">
-            <button
-              type="button"
-              disabled={!canApplyFilter}
-              onClick={() => handleAction(onGrayscale)}
-            >
+            <button type="button" disabled={!hasDocument} onClick={() => handleAction(onGrayscale)}>
               Grayscale
             </button>
 
-            <button type="button" disabled={!canApplyFilter} onClick={() => handleAction(onInvert)}>
+            <button type="button" disabled={!hasDocument} onClick={() => handleAction(onInvert)}>
               Invert Colors
             </button>
 
             <button
               type="button"
-              disabled={!canApplyFilter}
+              disabled={!hasDocument}
               onClick={() => handleAction(onBrightnessIncrease)}
             >
               Brightness +
@@ -163,7 +181,7 @@ function MenuBar({
 
             <button
               type="button"
-              disabled={!canApplyFilter}
+              disabled={!hasDocument}
               onClick={() => handleAction(onBrightnessDecrease)}
             >
               Brightness -
@@ -171,7 +189,7 @@ function MenuBar({
 
             <button
               type="button"
-              disabled={!canApplyFilter}
+              disabled={!hasDocument}
               onClick={() => handleAction(onContrastIncrease)}
             >
               Contrast +
@@ -179,13 +197,13 @@ function MenuBar({
 
             <button
               type="button"
-              disabled={!canApplyFilter}
+              disabled={!hasDocument}
               onClick={() => handleAction(onContrastDecrease)}
             >
               Contrast -
             </button>
 
-            <button type="button" disabled={!canApplyFilter} onClick={() => handleAction(onBlur)}>
+            <button type="button" disabled={!hasDocument} onClick={() => handleAction(onBlur)}>
               Blur
             </button>
           </div>

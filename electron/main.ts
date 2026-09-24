@@ -6,7 +6,7 @@
  */
 
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
-import { readFile } from 'node:fs/promises'
+import { writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const loadRenderer = (window: BrowserWindow): void => {
@@ -57,13 +57,26 @@ ipcMain.handle('dialog:openImage', async () => {
   return result.filePaths[0]
 })
 
-ipcMain.handle('file:readImage', async (_event, filePath: string) => {
-  const data = await readFile(filePath)
+ipcMain.handle('file:saveImage', async (_event, data: number[], format: 'png' | 'jpeg') => {
+  const extension = format === 'jpeg' ? 'jpg' : 'png'
 
-  return {
-    name: path.basename(filePath),
-    data: Array.from(data),
+  const result = await dialog.showSaveDialog({
+    defaultPath: `epigimp-export.${extension}`,
+    filters: [
+      {
+        name: format === 'jpeg' ? 'JPEG Image' : 'PNG Image',
+        extensions: [extension],
+      },
+    ],
+  })
+
+  if (result.canceled || !result.filePath) {
+    return false
   }
+
+  await writeFile(result.filePath, Buffer.from(data))
+
+  return true
 })
 
 app.whenReady().then(() => {
