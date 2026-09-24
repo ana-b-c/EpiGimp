@@ -14,4 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   readImage: (filePath: string): Promise<{ name: string; data: number[] }> =>
     ipcRenderer.invoke('file:readImage', filePath),
+
+  saveImage: (data: number[], format: 'png' | 'jpeg'): Promise<boolean> =>
+    ipcRenderer.invoke('file:saveImage', data, format),
 })

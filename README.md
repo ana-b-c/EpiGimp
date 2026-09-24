@@ -1,96 +1,152 @@
 # EpiGimp
 
-EpiGimp is a desktop raster graphics editor developed with **Electron, React, TypeScript and HTML5 Canvas**.
+EpiGimp is a desktop raster graphics editor developed with **Electron,
+React, TypeScript and HTML5 Canvas**.
 
-The project aims to reproduce the core workflow of a raster graphics editor, with support for image creation and manipulation, drawing and selection tools, layers, masks, filters and multiple file formats.
-
-EpiGimp is developed as part of a four-week project with a strong focus on **modularity, maintainability, performance and clean software architecture**.
-
----
+Version **1.0.0** implements the complete core editing workflow required
+by the original project scope: document creation/import, raster editing,
+selections, layers, masks, filters and PNG/JPEG export.
 
 ## Features
 
-### Core Editor
+### Documents and navigation
 
-The core development roadmap includes:
+- Create raster documents with custom dimensions
+- Import PNG, JPG and JPEG images
+- Preserve imported image dimensions
+- Preserve PNG transparency
+- Zoom from 10% to 800% without changing raster resolution
+- Display document dimensions and zoom level in the status bar
 
-- Raster image creation and import
-- Canvas-based image editing
-- Drawing tools
-- Selection tools
+### Editing tools
+
+- Brush
+- Eraser
+- Color picker
+- Rectangle selection
+- Crop from the current selection
 - Undo / Redo
-- Multi-layer editing
-- Layer masks
-- Image filters and effects
-- Image export
-- Multiple image formats
 
-### Advanced Features
+### Layers
 
-After the core editor is complete, the project roadmap includes additional features such as:
+- Add and delete layers
+- Select the active layer
+- Rename layers
+- Duplicate layers
+- Reorder layers
+- Toggle visibility
+- Adjust opacity
+- Edit only the active layer
+- Composite visible layers in the editor and during export
 
-- Advanced selections
-- Image transformations
-- Advanced history management
-- Advanced layer operations
-- Filter previews
-- Native `.epigimp` project files
-- Autosave and recovery
-- Canvas performance improvements
-- Professional editor workflow improvements
+### Layer masks
 
-> Features are implemented progressively throughout the project roadmap. The repository may not yet contain every feature listed above.
+- Add a mask to a layer
+- Enable or disable a mask
+- Remove a mask
+- Apply a rectangle selection to a mask
+- Non-destructive mask rendering
+- Independent masks when layers are duplicated
+- Mask support in Undo / Redo and crop operations
+
+### Filters
+
+Filters operate on the active layer through a reusable pixel-processing
+architecture.
+
+Supported filters:
+
+- Grayscale
+- Invert Colors
+- Brightness increase/decrease
+- Contrast increase/decrease
+- Blur
+
+Filter operations preserve document dimensions and alpha information and
+are registered in Undo / Redo history.
+
+### Export
+
+- PNG export with transparency
+- JPEG export with transparent areas flattened onto a white background
+- Visible-layer composition
+- Hidden layers excluded
+- Layer opacity preserved
+- Layer masks preserved
+- Native Electron Save dialog
+
+## Keyboard Shortcuts
+
+Shortcut Action
 
 ---
+
+`Ctrl+N` New document
+`Ctrl+O` Open image
+`Ctrl+Z` Undo
+`Ctrl+Shift+Z` Redo
+`Ctrl+Shift+P` Export PNG
+`Ctrl+Shift+J` Export JPEG
+
+Global shortcuts are ignored while typing in editable form fields.
+
+## Supported Formats
+
+### Import
+
+- PNG
+- JPG
+- JPEG
+
+### Export
+
+- PNG
+- JPEG
+
+PNG export preserves transparency. JPEG does not support transparency,
+so transparent areas are exported on a white background.
 
 ## Tech Stack
 
-EpiGimp currently uses:
-
-- **Electron** — desktop application runtime
-- **React** — user interface
-- **TypeScript** — application development
-- **HTML5 Canvas** — raster rendering and image manipulation
-- **Vite** — renderer development and production builds
-- **ESLint** — static code analysis
-- **Prettier** — code formatting
-
----
+- **Electron** --- desktop runtime and native file dialogs
+- **React** --- user interface
+- **TypeScript** --- application code and shared types
+- **HTML5 Canvas** --- raster rendering and manipulation
+- **Vite** --- renderer development and production build
+- **ESLint** --- static analysis
+- **Prettier** --- formatting
 
 ## Architecture
 
-EpiGimp separates desktop functionality, user interface and graphics-editing logic.
+EpiGimp separates desktop integration, UI, rendering and editing logic.
 
-```text id="w21mj7"
-┌───────────────────────────┐
-│   Electron Main Process   │
-│                           │
-│ Window / OS / Application │
-└─────────────┬─────────────┘
-              │ IPC
-              ▼
-┌───────────────────────────┐
-│       Preload Layer       │
-│                           │
-│     contextBridge API     │
-└─────────────┬─────────────┘
-              │
-              ▼
-┌───────────────────────────┐
-│      React Renderer       │
-│                           │
-│  UI / Canvas / Editor     │
-└───────────────────────────┘
+```text
+Electron Main Process
+        │
+        │ IPC
+        ▼
+   Preload Layer
+        │
+        │ window.electronAPI
+        ▼
+  React Renderer
+        │
+        ├── Canvas
+        ├── Tools
+        ├── Layers / Masks
+        ├── Filters
+        ├── History
+        └── Export
 ```
 
-The renderer is organized into independent application domains:
+Main source domains:
 
-```text id="xlk2wh"
+```text
 src/
-├── assets/
 ├── canvas/
 ├── components/
 ├── constants/
+├── export/
 ├── filters/
 ├── hooks/
 ├── layers/
@@ -100,174 +156,114 @@ src/
 └── utils/
 ```
 
-Shared visual values such as colors, typography and spacing are centralized through design tokens.
+Shared visual values are centralized in CSS design tokens. Native
+Electron/Node.js operations are kept behind the preload bridge.
 
-Shared application values are centralized through constants.
-
-Editing logic, UI components, rendering and operating-system access are kept separate whenever possible.
-
-For a detailed explanation, see [Architecture](./docs/architecture.md).
-
----
+See [Architecture](./docs/architecture.md) for details.
 
 ## Getting Started
 
 ### Requirements
 
-Make sure the following tools are installed:
+The v1.0 development environment uses:
 
-```text id="rvbm1m"
+```text
 Node.js 20.x
 npm 10.x
 Git
 ```
 
-### Installation
+Clone and install:
 
-Clone the repository:
-
-```bash id="7qrivg"
+```bash
 git clone https://github.com/ana-b-c/EpiGimp.git
 cd EpiGimp
-```
-
-Install dependencies:
-
-```bash id="0o2jge"
 npm install
 ```
 
-Start the development environment:
+Start development:
 
-```bash id="7mbhkm"
+```bash
 npm run dev
 ```
 
-This launches both the Vite development server and the Electron application.
+Build:
 
-For complete setup instructions and troubleshooting, see [Installation Guide](./docs/installation.md).
-
----
-
-## Development
-
-The main development commands are:
-
-```bash id="33hyx4"
-npm run dev
-npm run lint
-npm run format:check
+```bash
 npm run build
 ```
 
-Before considering a development task complete, the project should pass:
+See [Installation Guide](./docs/installation.md) for the complete setup.
 
-```text id="xhp6na"
-ESLint          ✓
-Prettier        ✓
-TypeScript      ✓
-React build     ✓
-Electron build  ✓
+## Development Commands
+
+```bash
+npm run dev
+npm run format
+npm run format:check
+npm run lint
+npm run build
+npm audit
 ```
 
-For coding conventions, modularity rules and the development workflow, see [Development Guide](./docs/development.md).
+Before completing a development task, the project should pass
+formatting, linting and the complete React/Electron build.
 
----
+See [Development Guide](./docs/development.md).
 
-## Development Principles
+## v1.0 Validation
 
-EpiGimp follows several core principles:
+The complete workflow has been manually validated:
 
-- Single responsibility
-- Separation of concerns
-- Reusable and readable functions
-- Centralized shared values
-- Minimal duplication
-- Modular application domains
-- Controlled Electron APIs
-- Continuous documentation
+```text
+Create / Open
+→ Edit
+→ Select / Crop
+→ Layers
+→ Masks
+→ Filters
+→ Export
+```
 
-The project avoids both large multi-purpose modules and unnecessary over-modularization.
+PNG and JPEG exports were also validated with multiple layers, hidden
+layers, opacity and masks.
 
-The goal is to keep the codebase understandable and extensible as the graphics editor grows.
+## Known Limitations
 
----
+EpiGimp v1.0 intentionally focuses on the original core project scope.
 
-## Project Roadmap
+The following features are not part of v1.0:
 
-Development is organized into four milestones.
-
-### Week 1 — Foundation & Core Editing
-
-- Electron + React + TypeScript architecture
-- Main editor interface
-- Canvas workspace
-- Raster document creation and import
-- Core drawing and selection tools
-- Basic Undo / Redo
-
-### Week 2 — Layers, Masks, Filters & Export
-
-- Multi-layer editing
-- Basic layer masks
-- Pixel-processing and filters
-- Export
-- Validation and first release
-
-Weeks 1 and 2 focus on delivering the core raster graphics editor.
-
-### Week 3 — Advanced Editing Workflow
-
-- Advanced selections
-- Image transformations
-- Advanced history
-- History panel
-- Advanced layers
-- Filter previews
-
-### Week 4 — Professional Workflow & Performance
-
-- Native `.epigimp` project format
-- Autosave
+- Advanced selection modes
+- Image rotation/scaling transformations
+- Advanced history panel
+- Real-time filter preview dialogs
+- Native `.epigimp` project files
+- Autosave and crash recovery
 - Unsaved-work protection
-- Recovery
-- Professional UX improvements
-- Canvas performance improvements
-- Final QA and documentation
+- Packaged installers/distributable binaries
 
-The GitHub Project is used to track individual development issues and progress throughout these milestones.
-
----
+These areas are planned as post-v1.0 improvements during the advanced
+project milestones.
 
 ## Documentation
 
-Detailed project documentation is available in:
+---
 
-| Document                                     | Purpose                                     |
-| -------------------------------------------- | ------------------------------------------- |
-| [Installation Guide](./docs/installation.md) | Install, build and run EpiGimp              |
-| [Architecture](./docs/architecture.md)       | Understand the technical architecture       |
-| [Development Guide](./docs/development.md)   | Development workflow and coding conventions |
-
-Documentation is maintained throughout development and should evolve together with the codebase.
+Document Purpose
 
 ---
 
-## Current Status
+[Installation Install, run and build EpiGimp
+Guide](./docs/installation.md)
 
-EpiGimp is currently under active development.
+[Architecture](./docs/architecture.md) Technical architecture and data
+flow
 
-The initial desktop foundation includes:
+[Development Coding conventions and workflow
+Guide](./docs/development.md)
+----------------------------------------------------------------------------
 
-- React + TypeScript renderer
-- Electron desktop runtime
-- Secure preload layer
-- Context isolation
-- Controlled IPC architecture
-- Development and production renderer loading
-- Modular source structure
-- Centralized design tokens
-- ESLint and Prettier configuration
-- Development and production builds
+## Version
 
-Graphics-editing functionality is implemented progressively according to the project roadmap.
+Current stable core release: **v1.0.0**

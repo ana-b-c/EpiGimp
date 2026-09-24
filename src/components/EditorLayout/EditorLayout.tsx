@@ -28,6 +28,10 @@ import { applyContrast } from '../../filters/contrast'
 import { applyGrayscale } from '../../filters/grayscale'
 import { applyInvert } from '../../filters/invert'
 
+import { exportJpeg, exportPng } from '../../export/exportImage'
+
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+
 import './EditorLayout.css'
 
 function EditorLayout() {
@@ -301,6 +305,39 @@ function EditorLayout() {
     clearSelection()
   }
 
+  const handleExportPng = async (): Promise<void> => {
+    if (!document) {
+      return
+    }
+
+    try {
+      await exportPng(document)
+    } catch (exportError) {
+      console.error('Unable to export PNG:', exportError)
+    }
+  }
+
+  const handleExportJpeg = async (): Promise<void> => {
+    if (!document) {
+      return
+    }
+
+    try {
+      await exportJpeg(document)
+    } catch (exportError) {
+      console.error('Unable to export JPEG:', exportError)
+    }
+  }
+
+  useKeyboardShortcuts({
+    onNewDocument: () => setIsNewDocumentOpen(true),
+    onOpenImage: openDocument,
+    onUndo: handleUndo,
+    onRedo: handleRedo,
+    onExportPng: handleExportPng,
+    onExportJpeg: handleExportJpeg,
+  })
+
   const activeLayer = document?.layers.find((layer) => layer.id === document.activeLayerId)
 
   const canMaskSelection = Boolean(activeLayer?.mask)
@@ -310,6 +347,8 @@ function EditorLayout() {
       <MenuBar
         onNewDocument={() => setIsNewDocumentOpen(true)}
         onOpenImage={openDocument}
+        onExportPng={handleExportPng}
+        onExportJpeg={handleExportJpeg}
         onUndo={handleUndo}
         onRedo={handleRedo}
         onGrayscale={handleGrayscale}
@@ -321,7 +360,7 @@ function EditorLayout() {
         onBlur={handleBlur}
         canUndo={canUndo}
         canRedo={canRedo}
-        canApplyFilter={document !== null}
+        hasDocument={document !== null}
       />
 
       <ToolOptions

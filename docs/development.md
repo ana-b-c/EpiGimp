@@ -1,342 +1,205 @@
 # EpiGimp Development Guide
 
-This document describes the development workflow, code organization and coding conventions used in EpiGimp.
+## 1. Purpose
 
-For installation instructions, see [`installation.md`](./installation.md).
+This document describes the development conventions used by EpiGimp
+v1.0.
 
-For a detailed explanation of the application architecture, see [`architecture.md`](./architecture.md).
+The main objective is to keep the raster editor readable and extensible
+while avoiding both large multi-purpose modules and unnecessary
+abstraction.
 
----
+## 2. Main Commands
 
-## 1. Development Philosophy
+Start development:
 
-EpiGimp is designed as a modular application.
+```bash
+npm run dev
+```
 
-As the project grows, features such as drawing tools, selections, layers, masks, filters and history will introduce significant complexity.
+Format:
 
-The codebase should therefore remain:
+```bash
+npm run format
+```
 
-- Modular
-- Readable
-- Maintainable
-- Reusable
-- Easy to extend
+Check formatting:
 
-The main principle is:
+```bash
+npm run format:check
+```
 
-> Separate code by responsibility, not simply by line count.
+Lint:
 
----
+```bash
+npm run lint
+```
 
-## 2. Project Structure
+Build React and Electron:
 
-The main source structure is:
+```bash
+npm run build
+```
+
+Audit dependencies:
+
+```bash
+npm audit
+```
+
+## 3. Validation Before Completing an Issue
+
+Run:
+
+```bash
+npm run format
+npm run lint
+npm run build
+npm audit
+```
+
+For changes affecting runtime behavior, also manually test the affected
+workflow.
+
+For v1.0, the complete validation flow is:
 
 ```text
-electron/
-├── main.ts
-├── preload.ts
-└── package.json
+Create / Open
+→ Edit
+→ Select / Crop
+→ Layers
+→ Masks
+→ Filters
+→ Export
+```
 
+## 4. Source Organization
+
+```text
 src/
-├── assets/
-├── canvas/
-├── components/
-├── constants/
-├── filters/
-├── hooks/
-├── layers/
-├── styles/
-├── tools/
-├── types/
-├── utils/
-├── App.tsx
-└── main.tsx
+├── canvas/       Canvas workspace and rendering helpers
+├── components/   React UI
+├── constants/    Shared application constants
+├── export/       Export preparation/encoding
+├── filters/      Image-processing algorithms
+├── hooks/        React-specific reusable behavior
+├── layers/       Layers, masks and composition
+├── styles/       Global styling and design tokens
+├── tools/        Editing tools
+├── types/        Shared TypeScript types
+└── utils/        Generic/shared helpers
 ```
 
-Each directory represents a specific responsibility.
+Code should live in the most specific relevant domain.
 
-New code should be placed in the module that owns its behavior rather than being placed in a generic directory by default.
+Do not move layer-only helpers into `utils/`, for example.
 
-For a complete explanation of each module, see [`architecture.md`](./architecture.md).
-
----
-
-## 3. Separation of Responsibilities
-
-The project separates several categories of logic:
-
-```text
-Desktop / OS
-     │
-     ▼
-Electron
-     │
-     ▼
-Preload / IPC
-     │
-     ▼
-React UI
-     │
-     ├── Canvas rendering
-     ├── Editing tools
-     ├── Layers
-     └── Filters
-```
-
-These responsibilities should not be unnecessarily mixed.
-
-For example, a React toolbar button may activate a Brush tool, but the component responsible for displaying the button should not contain the complete brush drawing algorithm.
-
-Similarly, image-processing algorithms should not depend on UI components when they can operate directly on image data.
-
----
-
-## 4. Functions
-
-Functions should have one clear responsibility.
-
-Avoid large functions that perform multiple unrelated operations.
-
-Instead of:
-
-```ts
-function handlePointerMove() {
-  // Read mouse position
-  // Convert coordinates
-  // Determine active tool
-  // Draw pixels
-  // Update layer
-  // Render canvas
-  // Update history
-}
-```
-
-prefer separating the responsibilities:
-
-```ts
-function handlePointerMove(event: PointerEvent) {
-  const position = getCanvasPosition(event)
-
-  if (!canUseActiveTool(position)) {
-    return
-  }
-
-  executeActiveTool(position)
-}
-```
-
-with dedicated functions such as:
-
-```text
-getCanvasPosition()
-canUseActiveTool()
-executeActiveTool()
-drawBrushStroke()
-updateActiveLayer()
-renderCanvas()
-pushHistoryEntry()
-```
-
-There is no strict maximum number of lines for a function.
-
-A function should be split when doing so improves:
-
-- Readability
-- Responsibility separation
-- Reusability
-- Testability
-
-Do not split functions artificially when the resulting code becomes harder to understand.
-
----
-
-## 5. Shared Values and Constants
-
-Values shared by several parts of the application should have a single source of truth.
-
-Application constants belong in:
-
-```text
-src/constants/
-```
-
-For example:
-
-```ts
-export const DEFAULT_ZOOM = 100
-export const MIN_ZOOM = 10
-export const MAX_ZOOM = 800
-```
-
-Other modules should import these values instead of redefining them.
-
-Avoid duplicated magic values such as:
-
-```ts
-if (zoom > 800) {
-  // ...
-}
-```
-
-when the value already has a defined meaning.
+## 5. Functions and Modules
 
 Prefer:
 
-```ts
-if (zoom > MAX_ZOOM) {
-  // ...
-}
-```
-
-This makes the code easier to understand and change.
-
----
-
-## 6. Design Tokens
-
-Shared visual values are centralized in:
-
-```text
-src/styles/tokens.css
-```
-
-This includes:
-
-- Colors
-- Typography
-- Font sizes
-- Font weights
-- Spacing
-- Border radii
-- Common layout dimensions
-- Z-index levels
-
-Do not duplicate an existing design value inside component styles.
+- short functions;
+- explicit names;
+- one responsibility;
+- reusable domain logic;
+- small modules with a clear purpose.
 
 Avoid:
 
-```css
-.layers-panel {
-  background: #27272a;
-}
-```
+- long event handlers containing unrelated logic;
+- duplicated algorithms;
+- unexplained magic values;
+- creating one file for every trivial helper without architectural
+  benefit.
 
-when the corresponding token already exists.
+## 6. React Components
 
-Prefer:
+React components should primarily handle:
 
-```css
-.layers-panel {
-  background: var(--color-bg-panel);
-}
-```
+- presentation;
+- user events;
+- composition of UI elements.
 
-Changing a shared design value should therefore require changing it in only one place.
+Raster algorithms should not be embedded directly into menu or panel
+components.
 
----
+For example, the Filters menu triggers a filter operation, but the
+grayscale algorithm itself lives in `src/filters/`.
 
-## 7. Component Styles
+## 7. Hooks
 
-Global design values belong in `tokens.css`, but styles specific to a component should remain close to that component.
+Custom hooks are used for meaningful React behavior such as:
 
-A future component may therefore use a structure such as:
+- raster document state;
+- zoom;
+- tool selection;
+- history;
+- selections;
+- keyboard shortcuts.
 
-```text
-components/
-└── Toolbar/
-    ├── Toolbar.tsx
-    └── Toolbar.css
-```
+Normal non-React functions should remain normal functions.
 
-`Toolbar.css` may define the layout and behavior specific to the toolbar while consuming shared values from `tokens.css`.
+## 8. Raster Data
 
-Avoid placing every component style inside `global.css`.
+Raster pixels are represented with Canvas `ImageData`.
 
----
+When independent state is required, copy the underlying
+`Uint8ClampedArray`.
 
-## 8. Reusable Utilities
+This is particularly important for:
 
-Generic reusable helpers belong in:
+- duplicated layers;
+- masks;
+- Undo / Redo snapshots;
+- filter output.
 
-```text
-src/utils/
-```
+Do not unintentionally share mutable raster buffers between independent
+layers or history states.
 
-Related utilities should remain grouped by responsibility.
+## 9. Layers and Masks
 
-For example:
+Editing operations should target the active layer unless the feature
+explicitly concerns the complete document.
 
-```text
-utils/
-└── color.ts
-```
+Masks remain separate from source layer pixels.
 
-could contain:
+Rendering a mask must not destructively rewrite the original layer.
 
-```text
-hexToRgb()
-rgbToHex()
-clampColor()
-```
+Use the shared layer-composition path when a feature needs the final
+visible document composition.
 
-Do not create a separate file for every very small function unless there is a clear architectural reason.
+## 10. Filters
 
-Also avoid using `utils/` as a generic location for code that belongs to a specific domain.
+Pixel-local filters should use the shared pixel-processing engine when
+possible.
 
-For example:
+A filter should:
 
-```text
-layers/calculateLayerOpacity.ts
-```
+1.  receive `ImageData`;
+2.  return new `ImageData`;
+3.  preserve dimensions;
+4.  preserve alpha unless changing alpha is an explicit feature;
+5.  remain independent from React UI.
 
-is preferable to:
+Algorithms that depend on neighboring pixels, such as blur, may use a
+specialized traversal while remaining inside the filters domain.
 
-```text
-utils/calculateLayerOpacity.ts
-```
+## 11. Export
 
-if the function is exclusively related to layers.
+Export must reuse the visible layer composition rather than implement a
+separate rendering model.
 
----
+PNG preserves transparency.
 
-## 9. TypeScript Types
+JPEG must flatten the composition onto an opaque background before
+encoding.
 
-Shared TypeScript types belong in:
+Native file saving is handled by Electron, not by direct Node.js access
+from React.
 
-```text
-src/types/
-```
+## 12. Electron Communication
 
-Types should be reused instead of being independently redefined in multiple modules.
-
-For example, when the layer system is introduced, a common `Layer` definition should be shared by the modules that manipulate layers.
-
-Types that are only meaningful inside one specific module may remain local to that module.
-
----
-
-## 10. React Hooks
-
-Reusable React-specific behavior may be extracted into:
-
-```text
-src/hooks/
-```
-
-A custom hook should be introduced when it provides a meaningful React abstraction or reusable behavior.
-
-Do not convert normal functions into hooks simply because the `hooks` directory exists.
-
-Generic functions that do not depend on React should remain outside the hooks directory.
-
----
-
-## 11. Electron Communication
-
-The React renderer must not directly access Node.js or unrestricted Electron APIs.
-
-Desktop operations follow this path:
+Desktop operations follow:
 
 ```text
 React
@@ -350,134 +213,61 @@ IPC
 main.ts
 ```
 
-New Electron capabilities should be explicitly exposed through the preload layer.
+Do not expose unrestricted `ipcRenderer`, filesystem APIs or Node.js
+globals to the renderer.
 
-Avoid exposing the complete `ipcRenderer`, Node.js APIs or unrestricted Electron functionality to the renderer.
+When adding a new native capability:
 
----
+1.  implement the main-process handler;
+2.  expose a narrow preload method;
+3.  type it in `src/types/electron.d.ts`;
+4.  call that typed method from the renderer.
 
-## 12. Development Mode
+## 13. Keyboard Shortcuts
 
-Start the complete development environment with:
+Global keyboard behavior is centralized.
 
-```bash
-npm run dev
-```
+Do not add unrelated `window.addEventListener('keydown', ...)` handlers
+throughout components.
 
-This starts the React development server and Electron application.
+Shortcuts should not interfere with text inputs, textareas, selects or
+content-editable elements.
 
-The development renderer is loaded from:
+## 14. Styling
 
-```text
-http://localhost:5173
-```
-
-The `VITE_DEV_SERVER_URL` environment variable is used by the Electron main process to determine when the development renderer should be loaded.
-
-`cross-env` is used to define this variable in a portable way.
-
----
-
-## 13. Production Build
-
-Build the complete project with:
-
-```bash
-npm run build
-```
-
-The renderer is generated in:
+Shared visual values belong in:
 
 ```text
-dist/
+src/styles/tokens.css
 ```
 
-The Electron TypeScript code is generated in:
+Use existing tokens for:
 
-```text
-dist-electron/
-```
+- colors;
+- spacing;
+- font sizes;
+- radii;
+- layout dimensions;
+- z-index.
 
-When the development server URL is not defined, Electron loads:
+Avoid duplicating hard-coded visual values when an appropriate token
+already exists.
 
-```text
-dist/index.html
-```
+Component-specific styling stays beside the component.
 
-directly.
+## 15. TypeScript
 
-This ensures that the built application does not depend on the Vite development server.
+Reuse shared types rather than redefining the same structures.
 
----
+Use explicit domain types for important application concepts such as
+documents and layers.
 
-## 14. Linux / Wayland Development Workaround
-
-During initial development on Ubuntu with a Wayland session, Electron encountered a Chromium/GTK rendering crash.
-
-The application successfully runs using:
-
-```text
---ozone-platform=x11
-```
-
-The current Electron development command includes this option.
-
-Some Chromium messages such as:
-
-```text
-GetVSyncParametersIfAvailable() failed
-```
-
-may still appear.
-
-During initial testing, these messages did not prevent the application from rendering or functioning correctly.
-
-This is considered an environment-specific development workaround rather than an EpiGimp application requirement.
-
----
-
-## 15. ESLint
-
-Run static code analysis with:
-
-```bash
-npm run lint
-```
-
-ESLint is responsible for detecting configured code-quality and TypeScript/React issues.
-
-Generated directories such as:
-
-```text
-dist/
-dist-electron/
-```
-
-are excluded from linting.
-
-New code should pass ESLint before being considered complete.
-
----
+Keep local-only types inside their module when they are not shared
+elsewhere.
 
 ## 16. Prettier
 
-Check project formatting with:
-
-```bash
-npm run format:check
-```
-
-Apply formatting automatically with:
-
-```bash
-npm run format
-```
-
-Prettier is responsible for formatting, while ESLint remains responsible for code analysis.
-
-This keeps the responsibilities of the two tools separate.
-
-The current formatting conventions include:
+Current conventions include:
 
 ```text
 Semicolons:       No
@@ -487,111 +277,54 @@ Print width:      100
 Indentation:      2 spaces
 ```
 
----
+Use Prettier instead of manually formatting around these rules.
 
-## 17. Before Completing a Development Task
+## 17. Git Workflow
 
-Before considering an implementation task complete, run:
+Keep branches and commits focused on a clear task or issue.
 
-```bash
-npm run lint
-npm run format:check
-npm run build
-```
-
-The expected result is:
+Example commit messages:
 
 ```text
-ESLint        ✓
-Formatting    ✓
-TypeScript    ✓
-React build   ✓
-Electron build ✓
+feat: implement image filters and pixel processing
+feat: add PNG and JPEG export
+feat: add editor keyboard shortcuts
+fix: preserve white background in JPEG export
+docs: update documentation for v1.0
 ```
 
-For changes affecting runtime behavior, also launch the application and manually verify the affected functionality.
+Before merging a stable release, ensure the complete validation sequence
+passes.
 
----
+## 18. Release Checklist
 
-## 18. Git Workflow
-
-Development work should be divided into focused changes.
-
-Starting from feature development after the initial project foundation, work should be performed on dedicated branches rather than directly on the main branch.
-
-A typical workflow is:
+For v1.0:
 
 ```text
-main
-  │
-  ▼
-develop
-  │
-  ├── feature/canvas-workspace
-  ├── feature/drawing-tools
-  ├── feature/layers
-  └── feature/filters
+[ ] npm run format
+[ ] npm run lint
+[ ] npm run build
+[ ] npm audit
+[ ] Complete editing workflow tested
+[ ] PNG export tested
+[ ] JPEG export tested
+[ ] README updated
+[ ] Installation documentation updated
+[ ] Architecture documentation updated
+[ ] Known limitations documented
+[ ] Stable branch merged into main
+[ ] v1.0.0 tag created
 ```
 
-Feature branches should contain changes related to one clear task or issue.
+## 19. Core Rules
 
-Commits should also remain focused and use descriptive messages.
-
-Examples:
-
-```text
-feat: add canvas workspace
-feat: implement brush tool
-fix: correct canvas coordinate conversion
-refactor: separate layer rendering logic
-docs: document layer architecture
-chore: configure development tooling
-```
-
-The exact branching workflow may evolve during the project, but changes should remain traceable to the corresponding GitHub Project issue.
-
----
-
-## 19. Documentation
-
-Documentation is maintained throughout development rather than being written only at the end of the project.
-
-Update documentation when a change affects:
-
-- Installation
-- Architecture
-- Development workflow
-- Important technical decisions
-- Commands or dependencies
-
-The documentation currently includes:
-
-```text
-docs/
-├── architecture.md
-├── development.md
-└── installation.md
-```
-
-The root `README.md` provides the main project overview and links to the detailed documentation.
-
----
-
-## 20. Core Development Rules
-
-When adding new code to EpiGimp, keep the following rules in mind:
-
-1. Give each function and module a clear responsibility.
-2. Prefer small and readable functions over large multi-purpose functions.
-3. Reuse shared logic instead of duplicating it.
-4. Centralize shared constants and design values.
-5. Keep UI logic separate from image-processing and editing logic.
-6. Keep Electron/OS access behind the preload bridge.
-7. Avoid unexplained magic values.
-8. Avoid unnecessary abstraction and over-modularization.
-9. Keep naming explicit and consistent.
-10. Update documentation when architectural decisions change.
-
-The objective is not to create the largest possible number of files or abstractions.
-
-The objective is to keep EpiGimp understandable as its functionality grows.
+1.  Keep functions small and explicit.
+2.  Keep responsibilities separated.
+3.  Reuse shared rendering and processing logic.
+4.  Keep native access behind Electron preload.
+5.  Deep-copy mutable raster data when independence matters.
+6.  Keep UI and image algorithms separate.
+7.  Prefer existing tokens/constants to magic values.
+8.  Keep code understandable for another developer.
+9.  Validate runtime behavior, not only compilation.
+10. Update documentation when the architecture changes.
