@@ -9,39 +9,72 @@ import { useState } from 'react'
 
 import './MenuBar.css'
 
-const MENU_ITEMS = ['Image', 'Filters', 'View'] as const
+const MENU_ITEMS = ['View'] as const
 
 interface MenuBarProps {
   onNewDocument: () => void
   onOpenImage: () => void
   onUndo: () => void
   onRedo: () => void
+  onGrayscale: () => void
+  onInvert: () => void
+  onBrightnessIncrease: () => void
+  onBrightnessDecrease: () => void
+  onContrastIncrease: () => void
+  onContrastDecrease: () => void
+  onBlur: () => void
   canUndo: boolean
   canRedo: boolean
+  canApplyFilter: boolean
 }
 
-function MenuBar({ onNewDocument, onOpenImage, onUndo, onRedo, canUndo, canRedo }: MenuBarProps) {
+function MenuBar({
+  onNewDocument,
+  onOpenImage,
+  onUndo,
+  onRedo,
+  onGrayscale,
+  onInvert,
+  onBrightnessIncrease,
+  onBrightnessDecrease,
+  onContrastIncrease,
+  onContrastDecrease,
+  onBlur,
+  canUndo,
+  canRedo,
+  canApplyFilter,
+}: MenuBarProps) {
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false)
   const [isEditMenuOpen, setIsEditMenuOpen] = useState(false)
+  const [isFiltersMenuOpen, setIsFiltersMenuOpen] = useState(false)
 
-  const handleFileAction = (action: () => void): void => {
+  const closeMenus = (): void => {
     setIsFileMenuOpen(false)
-    action()
+    setIsEditMenuOpen(false)
+    setIsFiltersMenuOpen(false)
   }
 
-  const handleEditAction = (action: () => void): void => {
-    setIsEditMenuOpen(false)
+  const handleAction = (action: () => void): void => {
+    closeMenus()
     action()
   }
 
   const toggleFileMenu = (): void => {
     setIsFileMenuOpen((isOpen) => !isOpen)
     setIsEditMenuOpen(false)
+    setIsFiltersMenuOpen(false)
   }
 
   const toggleEditMenu = (): void => {
     setIsEditMenuOpen((isOpen) => !isOpen)
     setIsFileMenuOpen(false)
+    setIsFiltersMenuOpen(false)
+  }
+
+  const toggleFiltersMenu = (): void => {
+    setIsFiltersMenuOpen((isOpen) => !isOpen)
+    setIsFileMenuOpen(false)
+    setIsEditMenuOpen(false)
   }
 
   return (
@@ -58,11 +91,11 @@ function MenuBar({ onNewDocument, onOpenImage, onUndo, onRedo, canUndo, canRedo 
 
         {isFileMenuOpen && (
           <div className="menu-bar__dropdown">
-            <button type="button" onClick={() => handleFileAction(onNewDocument)}>
+            <button type="button" onClick={() => handleAction(onNewDocument)}>
               New
             </button>
 
-            <button type="button" onClick={() => handleFileAction(onOpenImage)}>
+            <button type="button" onClick={() => handleAction(onOpenImage)}>
               Open
             </button>
           </div>
@@ -81,12 +114,79 @@ function MenuBar({ onNewDocument, onOpenImage, onUndo, onRedo, canUndo, canRedo 
 
         {isEditMenuOpen && (
           <div className="menu-bar__dropdown">
-            <button type="button" disabled={!canUndo} onClick={() => handleEditAction(onUndo)}>
+            <button type="button" disabled={!canUndo} onClick={() => handleAction(onUndo)}>
               Undo
             </button>
 
-            <button type="button" disabled={!canRedo} onClick={() => handleEditAction(onRedo)}>
+            <button type="button" disabled={!canRedo} onClick={() => handleAction(onRedo)}>
               Redo
+            </button>
+          </div>
+        )}
+      </div>
+
+      <button className="menu-bar__item" type="button">
+        Image
+      </button>
+
+      <div className="menu-bar__menu">
+        <button
+          className="menu-bar__item"
+          type="button"
+          onClick={toggleFiltersMenu}
+          aria-expanded={isFiltersMenuOpen}
+        >
+          Filters
+        </button>
+
+        {isFiltersMenuOpen && (
+          <div className="menu-bar__dropdown">
+            <button
+              type="button"
+              disabled={!canApplyFilter}
+              onClick={() => handleAction(onGrayscale)}
+            >
+              Grayscale
+            </button>
+
+            <button type="button" disabled={!canApplyFilter} onClick={() => handleAction(onInvert)}>
+              Invert Colors
+            </button>
+
+            <button
+              type="button"
+              disabled={!canApplyFilter}
+              onClick={() => handleAction(onBrightnessIncrease)}
+            >
+              Brightness +
+            </button>
+
+            <button
+              type="button"
+              disabled={!canApplyFilter}
+              onClick={() => handleAction(onBrightnessDecrease)}
+            >
+              Brightness -
+            </button>
+
+            <button
+              type="button"
+              disabled={!canApplyFilter}
+              onClick={() => handleAction(onContrastIncrease)}
+            >
+              Contrast +
+            </button>
+
+            <button
+              type="button"
+              disabled={!canApplyFilter}
+              onClick={() => handleAction(onContrastDecrease)}
+            >
+              Contrast -
+            </button>
+
+            <button type="button" disabled={!canApplyFilter} onClick={() => handleAction(onBlur)}>
+              Blur
             </button>
           </div>
         )}
