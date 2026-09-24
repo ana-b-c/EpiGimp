@@ -19,7 +19,9 @@ interface ToolOptionsProps {
   onBrushColorChange: (color: string) => void
   onEraserSizeChange: (size: number) => void
   hasSelection: boolean
+  canMaskSelection: boolean
   onCrop: () => void
+  onMaskSelection: () => void
 }
 
 function ToolOptions({
@@ -30,7 +32,9 @@ function ToolOptions({
   onBrushColorChange,
   onEraserSizeChange,
   hasSelection,
+  canMaskSelection,
   onCrop,
+  onMaskSelection,
 }: ToolOptionsProps) {
   return (
     <section className="tool-options">
@@ -74,9 +78,19 @@ function ToolOptions({
       )}
 
       {activeTool === 'rectangle-select' && (
-        <button type="button" disabled={!hasSelection} onClick={onCrop}>
-          Crop
-        </button>
+        <>
+          <button type="button" disabled={!hasSelection} onClick={onCrop}>
+            Crop
+          </button>
+
+          <button
+            type="button"
+            disabled={!hasSelection || !canMaskSelection}
+            onClick={onMaskSelection}
+          >
+            Mask Selection
+          </button>
+        </>
       )}
     </section>
   )

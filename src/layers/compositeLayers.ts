@@ -24,6 +24,39 @@ function createLayerCanvas(layer: Layer): HTMLCanvasElement {
   return canvas
 }
 
+function applyMask(layerCanvas: HTMLCanvasElement, layer: Layer): void {
+  if (!layer.mask?.enabled) {
+    return
+  }
+
+  const context = layerCanvas.getContext('2d')
+
+  if (!context) {
+    throw new Error('Unable to create layer context')
+  }
+
+  const layerImageData = context.getImageData(0, 0, layerCanvas.width, layerCanvas.height)
+
+  const maskData = layer.mask.imageData.data
+  const pixelData = layerImageData.data
+
+  for (let index = 0; index < pixelData.length; index += 4) {
+    const maskValue = maskData[index] / 255
+
+    pixelData[index + 3] *= maskValue
+  }
+
+  context.putImageData(layerImageData, 0, 0)
+}
+
+function createRenderedLayerCanvas(layer: Layer): HTMLCanvasElement {
+  const canvas = createLayerCanvas(layer)
+
+  applyMask(canvas, layer)
+
+  return canvas
+}
+
 export function compositeLayers(
   context: CanvasRenderingContext2D,
   layers: Layer[],
@@ -37,7 +70,7 @@ export function compositeLayers(
       return
     }
 
-    const layerCanvas = createLayerCanvas(layer)
+    const layerCanvas = createRenderedLayerCanvas(layer)
 
     context.save()
     context.globalAlpha = layer.opacity / 100

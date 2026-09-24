@@ -24,6 +24,9 @@ interface LayersPanelProps {
   onOpacityEditStart: () => void
   onMoveLayerUp: (layerId: string) => void
   onMoveLayerDown: (layerId: string) => void
+  onAddMask: (layerId: string) => void
+  onToggleMask: (layerId: string) => void
+  onRemoveMask: (layerId: string) => void
 }
 
 function LayersPanel({
@@ -39,6 +42,9 @@ function LayersPanel({
   onOpacityEditStart,
   onMoveLayerUp,
   onMoveLayerDown,
+  onAddMask,
+  onToggleMask,
+  onRemoveMask,
 }: LayersPanelProps) {
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
@@ -190,6 +196,32 @@ function LayersPanel({
                   />
 
                   <span>{layer.opacity}%</span>
+                </div>
+
+                <div className="layers-panel__mask">
+                  {layer.mask ? (
+                    <>
+                      <span className="layers-panel__mask-label">
+                        Mask: {layer.mask.enabled ? 'ON' : 'OFF'}
+                      </span>
+
+                      <button type="button" onClick={() => onToggleMask(layer.id)}>
+                        {layer.mask.enabled ? 'Disable' : 'Enable'}
+                      </button>
+
+                      <button type="button" onClick={() => onRemoveMask(layer.id)}>
+                        Remove
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="layers-panel__mask-label">No mask</span>
+
+                      <button type="button" onClick={() => onAddMask(layer.id)}>
+                        Add Mask
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )

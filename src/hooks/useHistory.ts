@@ -15,14 +15,20 @@ interface HistoryState {
   future: RasterDocument[]
 }
 
+function cloneImageData(imageData: ImageData): ImageData {
+  return new ImageData(new Uint8ClampedArray(imageData.data), imageData.width, imageData.height)
+}
+
 function cloneLayer(layer: Layer): Layer {
   return {
     ...layer,
-    imageData: new ImageData(
-      new Uint8ClampedArray(layer.imageData.data),
-      layer.imageData.width,
-      layer.imageData.height,
-    ),
+    imageData: cloneImageData(layer.imageData),
+    mask: layer.mask
+      ? {
+          ...layer.mask,
+          imageData: cloneImageData(layer.mask.imageData),
+        }
+      : undefined,
   }
 }
 

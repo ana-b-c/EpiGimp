@@ -43,17 +43,17 @@ function EditorLayout() {
     setLayerOpacity,
     moveLayerUp,
     moveLayerDown,
+    addLayerMask,
+    toggleLayerMask,
+    removeLayerMask,
+    applySelectionToLayerMask,
     replaceDocument,
   } = useRasterDocument()
 
   const { zoom, zoomIn, zoomOut } = useZoom()
-
   const { activeTool, selectTool } = useToolManager()
-
   const { brushOptions, setBrushSize, setBrushColor } = useBrushOptions()
-
   const { eraserOptions, setEraserSize } = useEraserOptions()
-
   const { selection, setSelection, clearSelection } = useSelection()
 
   const { pushHistory, undo, redo, clearHistory, canUndo, canRedo } = useHistory()
@@ -103,7 +103,6 @@ function EditorLayout() {
 
   const handleRenameLayer = (layerId: string, name: string): void => {
     const layer = document?.layers.find((currentLayer) => currentLayer.id === layerId)
-
     const trimmedName = name.trim()
 
     if (!document || !layer || !trimmedName || layer.name === trimmedName) {
@@ -174,6 +173,55 @@ function EditorLayout() {
     moveLayerDown(layerId)
   }
 
+  const handleAddLayerMask = (layerId: string): void => {
+    const layer = document?.layers.find((currentLayer) => currentLayer.id === layerId)
+
+    if (!document || !layer || layer.mask) {
+      return
+    }
+
+    pushHistory(document)
+    addLayerMask(layerId)
+  }
+
+  const handleToggleLayerMask = (layerId: string): void => {
+    const layer = document?.layers.find((currentLayer) => currentLayer.id === layerId)
+
+    if (!document || !layer?.mask) {
+      return
+    }
+
+    pushHistory(document)
+    toggleLayerMask(layerId)
+  }
+
+  const handleRemoveLayerMask = (layerId: string): void => {
+    const layer = document?.layers.find((currentLayer) => currentLayer.id === layerId)
+
+    if (!document || !layer?.mask) {
+      return
+    }
+
+    pushHistory(document)
+    removeLayerMask(layerId)
+  }
+
+  const handleMaskSelection = (): void => {
+    if (!document || !selection) {
+      return
+    }
+
+    const activeLayer = document.layers.find((layer) => layer.id === document.activeLayerId)
+
+    if (!activeLayer?.mask) {
+      return
+    }
+
+    pushHistory(document)
+    applySelectionToLayerMask(activeLayer.id, selection)
+    clearSelection()
+  }
+
   const handleUndo = (): void => {
     if (!document) {
       return
@@ -204,6 +252,10 @@ function EditorLayout() {
     clearSelection()
   }
 
+  const activeLayer = document?.layers.find((layer) => layer.id === document.activeLayerId)
+
+  const canMaskSelection = Boolean(activeLayer?.mask)
+
   return (
     <div className="editor-layout">
       <MenuBar
@@ -223,7 +275,9 @@ function EditorLayout() {
         onBrushColorChange={setBrushColor}
         onEraserSizeChange={setEraserSize}
         hasSelection={selection !== null && selection.width > 0 && selection.height > 0}
+        canMaskSelection={canMaskSelection}
         onCrop={handleCrop}
+        onMaskSelection={handleMaskSelection}
       />
 
       {error && <p className="editor-layout__error">{error}</p>}
@@ -257,6 +311,9 @@ function EditorLayout() {
           onOpacityEditStart={handleLayerOpacityEditStart}
           onMoveLayerUp={handleMoveLayerUp}
           onMoveLayerDown={handleMoveLayerDown}
+          onAddMask={handleAddLayerMask}
+          onToggleMask={handleToggleLayerMask}
+          onRemoveMask={handleRemoveLayerMask}
         />
       </div>
 

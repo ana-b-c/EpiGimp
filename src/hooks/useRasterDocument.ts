@@ -13,6 +13,8 @@ import type { RasterDocument } from '../types/RasterDocument'
 import { createRasterDocument } from '../utils/createRasterDocument'
 import { loadRasterImage } from '../utils/loadRasterImage'
 import { createLayer } from '../layers/createLayer'
+import { createLayerMask } from '../layers/createLayerMask'
+import { maskSelection } from '../layers/maskSelection'
 
 export function useRasterDocument() {
   const [document, setDocument] = useState<RasterDocument | null>(null)
@@ -70,6 +72,12 @@ export function useRasterDocument() {
       const croppedLayers = currentDocument.layers.map((layer) => ({
         ...layer,
         imageData: cropImageData(layer.imageData, selection),
+        mask: layer.mask
+          ? {
+              ...layer.mask,
+              imageData: cropImageData(layer.mask.imageData, selection),
+            }
+          : undefined,
       }))
 
       const firstLayer = croppedLayers[0]
@@ -196,6 +204,16 @@ export function useRasterDocument() {
           sourceLayer.imageData.width,
           sourceLayer.imageData.height,
         ),
+        mask: sourceLayer.mask
+          ? {
+              ...sourceLayer.mask,
+              imageData: new ImageData(
+                new Uint8ClampedArray(sourceLayer.mask.imageData.data),
+                sourceLayer.mask.imageData.width,
+                sourceLayer.mask.imageData.height,
+              ),
+            }
+          : undefined,
       }
 
       const layers = [...currentDocument.layers]
@@ -298,6 +316,92 @@ export function useRasterDocument() {
     })
   }
 
+  const addLayerMask = (layerId: string): void => {
+    setDocument((currentDocument) => {
+      if (!currentDocument) {
+        return null
+      }
+
+      return {
+        ...currentDocument,
+        layers: currentDocument.layers.map((layer) =>
+          layer.id === layerId && !layer.mask
+            ? {
+                ...layer,
+                mask: createLayerMask(layer.imageData.width, layer.imageData.height),
+              }
+            : layer,
+        ),
+      }
+    })
+  }
+
+  const toggleLayerMask = (layerId: string): void => {
+    setDocument((currentDocument) => {
+      if (!currentDocument) {
+        return null
+      }
+
+      return {
+        ...currentDocument,
+        layers: currentDocument.layers.map((layer) =>
+          layer.id === layerId && layer.mask
+            ? {
+                ...layer,
+                mask: {
+                  ...layer.mask,
+                  enabled: !layer.mask.enabled,
+                },
+              }
+            : layer,
+        ),
+      }
+    })
+  }
+
+  const removeLayerMask = (layerId: string): void => {
+    setDocument((currentDocument) => {
+      if (!currentDocument) {
+        return null
+      }
+
+      return {
+        ...currentDocument,
+        layers: currentDocument.layers.map((layer) =>
+          layer.id === layerId && layer.mask
+            ? {
+                ...layer,
+                mask: undefined,
+              }
+            : layer,
+        ),
+      }
+    })
+  }
+
+  const applySelectionToLayerMask = (layerId: string, selection: RectangleSelection): void => {
+    setDocument((currentDocument) => {
+      if (!currentDocument) {
+        return null
+      }
+
+      return {
+        ...currentDocument,
+        layers: currentDocument.layers.map((layer) =>
+          layer.id === layerId && layer.mask
+            ? {
+                ...layer,
+                mask: {
+                  ...layer.mask,
+                  imageData: maskSelection(layer.mask.imageData, selection),
+                },
+              }
+            : layer,
+        ),
+      }
+    })
+  }
+
   const replaceDocument = (rasterDocument: RasterDocument): void => {
     setDocument(rasterDocument)
     setError(null)
@@ -319,6 +423,10 @@ export function useRasterDocument() {
     setLayerOpacity,
     moveLayerUp,
     moveLayerDown,
+    addLayerMask,
+    toggleLayerMask,
+    removeLayerMask,
+    applySelectionToLayerMask,
     replaceDocument,
   }
 }
