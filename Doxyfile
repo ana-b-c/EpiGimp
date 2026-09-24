@@ -15,7 +15,12 @@ EXTRACT_ALL            = YES
 EXTRACT_PRIVATE        = NO
 EXTRACT_STATIC         = YES
 
-INPUT                   = src electron
+INPUT                   = README.md \
+                          src \
+                          electron
+
+USE_MDFILE_AS_MAINPAGE  = README.md
+
 RECURSIVE               = YES
 
 FILE_PATTERNS           = *.ts \

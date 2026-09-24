@@ -46,9 +46,7 @@ function LayersPanel({
   onToggleMask,
   onRemoveMask,
 }: LayersPanelProps) {
-  const [editingLayerId, setEditingLayerId] = useState<string | null>(
-    null,
-  )
+  const [editingLayerId, setEditingLayerId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
 
   const startRenaming = (layer: Layer): void => {
@@ -88,9 +86,7 @@ function LayersPanel({
           <p>No layers yet.</p>
         ) : (
           [...layers].reverse().map((layer) => {
-            const layerIndex = layers.findIndex(
-              (currentLayer) => currentLayer.id === layer.id,
-            )
+            const layerIndex = layers.findIndex((currentLayer) => currentLayer.id === layer.id)
             const canMoveUp = layerIndex < layers.length - 1
             const canMoveDown = layerIndex > 0
             const isActive = layer.id === activeLayerId
@@ -98,9 +94,7 @@ function LayersPanel({
 
             return (
               <div
-                className={`layers-panel__layer ${
-                  isActive ? 'layers-panel__layer--active' : ''
-                }`}
+                className={`layers-panel__layer ${isActive ? 'layers-panel__layer--active' : ''}`}
                 key={layer.id}
               >
                 <div className="layers-panel__layer-main">
@@ -109,9 +103,7 @@ function LayersPanel({
                     type="button"
                     onClick={() => onToggleVisibility(layer.id)}
                     aria-label={`${layer.visible ? 'Hide' : 'Show'} ${layer.name}`}
-                    title={
-                      layer.visible ? 'Hide layer' : 'Show layer'
-                    }
+                    title={layer.visible ? 'Hide layer' : 'Show layer'}
                   >
                     {layer.visible ? '[x]' : '[ ]'}
                   </button>
@@ -122,9 +114,7 @@ function LayersPanel({
                       type="text"
                       value={editingName}
                       autoFocus
-                      onChange={(event) =>
-                        setEditingName(event.target.value)
-                      }
+                      onChange={(event) => setEditingName(event.target.value)}
                       onBlur={() => finishRenaming(layer.id)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') {
@@ -193,9 +183,7 @@ function LayersPanel({
                 </div>
 
                 <div className="layers-panel__opacity">
-                  <label htmlFor={`opacity-${layer.id}`}>
-                    Opacity
-                  </label>
+                  <label htmlFor={`opacity-${layer.id}`}>Opacity</label>
 
                   <input
                     id={`opacity-${layer.id}`}
@@ -204,12 +192,7 @@ function LayersPanel({
                     max="100"
                     value={layer.opacity}
                     onPointerDown={onOpacityEditStart}
-                    onChange={(event) =>
-                      onOpacityChange(
-                        layer.id,
-                        Number(event.target.value),
-                      )
-                    }
+                    onChange={(event) => onOpacityChange(layer.id, Number(event.target.value))}
                   />
 
                   <span>{layer.opacity}%</span>
@@ -222,30 +205,19 @@ function LayersPanel({
                         Mask: {layer.mask.enabled ? 'ON' : 'OFF'}
                       </span>
 
-                      <button
-                        type="button"
-                        onClick={() => onToggleMask(layer.id)}
-                      >
+                      <button type="button" onClick={() => onToggleMask(layer.id)}>
                         {layer.mask.enabled ? 'Disable' : 'Enable'}
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => onRemoveMask(layer.id)}
-                      >
+                      <button type="button" onClick={() => onRemoveMask(layer.id)}>
                         Remove
                       </button>
                     </>
                   ) : (
                     <>
-                      <span className="layers-panel__mask-label">
-                        No mask
-                      </span>
+                      <span className="layers-panel__mask-label">No mask</span>
 
-                      <button
-                        type="button"
-                        onClick={() => onAddMask(layer.id)}
-                      >
+                      <button type="button" onClick={() => onAddMask(layer.id)}>
                         Add Mask
                       </button>
                     </>
