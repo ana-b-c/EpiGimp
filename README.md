@@ -269,16 +269,16 @@ Guide](./docs/development.md)
 Detailed technical documentation is available in the [`docs/`](docs/)
 directory.
 
-| Domain | Documentation |
-| --- | --- |
-| Architecture | [Architecture overview](docs/architecture.md) |
-| Canvas | [Canvas system](docs/canvas/README.md) |
-| Tools | [Editing tools](docs/tools/README.md) |
-| Layers | [Layers and masks](docs/layers/README.md) |
-| Filters | [Filters and pixel processing](docs/filters/README.md) |
-| Export | [Image export](docs/export/README.md) |
-| Hooks | [React hooks and editor state](docs/hooks/README.md) |
-| Electron | [Electron architecture](docs/electron/README.md) |
+| Domain       | Documentation                                          |
+| ------------ | ------------------------------------------------------ |
+| Architecture | [Architecture overview](docs/architecture.md)          |
+| Canvas       | [Canvas system](docs/canvas/README.md)                 |
+| Tools        | [Editing tools](docs/tools/README.md)                  |
+| Layers       | [Layers and masks](docs/layers/README.md)              |
+| Filters      | [Filters and pixel processing](docs/filters/README.md) |
+| Export       | [Image export](docs/export/README.md)                  |
+| Hooks        | [React hooks and editor state](docs/hooks/README.md)   |
+| Electron     | [Electron architecture](docs/electron/README.md)       |
 
 Additional documentation:
 

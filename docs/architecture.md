@@ -513,15 +513,15 @@ IPC operations.
 
 The V1 architecture is documented by domain:
 
-| Domain | Documentation |
-| --- | --- |
-| Canvas | [Canvas System](canvas/README.md) |
-| Tools | [Editing Tools](tools/README.md) |
-| Layers | [Layers and Masks](layers/README.md) |
-| Filters | [Filters and Pixel Processing](filters/README.md) |
-| Export | [Image Export](export/README.md) |
-| Hooks | [React Hooks and Editor State](hooks/README.md) |
-| Electron | [Electron Architecture](electron/README.md) |
+| Domain   | Documentation                                     |
+| -------- | ------------------------------------------------- |
+| Canvas   | [Canvas System](canvas/README.md)                 |
+| Tools    | [Editing Tools](tools/README.md)                  |
+| Layers   | [Layers and Masks](layers/README.md)              |
+| Filters  | [Filters and Pixel Processing](filters/README.md) |
+| Export   | [Image Export](export/README.md)                  |
+| Hooks    | [React Hooks and Editor State](hooks/README.md)   |
+| Electron | [Electron Architecture](electron/README.md)       |
 
 These documents describe the internal behavior, design decisions and
 interactions of each major subsystem.

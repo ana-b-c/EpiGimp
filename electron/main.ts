@@ -6,7 +6,7 @@
  */
 
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
-import { writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const loadRenderer = (window: BrowserWindow): void => {
@@ -55,6 +55,15 @@ ipcMain.handle('dialog:openImage', async () => {
   }
 
   return result.filePaths[0]
+})
+
+ipcMain.handle('file:readImage', async (_event, filePath: string) => {
+  const buffer = await readFile(filePath)
+
+  return {
+    name: path.basename(filePath),
+    data: Array.from(buffer),
+  }
 })
 
 ipcMain.handle('file:saveImage', async (_event, data: number[], format: 'png' | 'jpeg') => {

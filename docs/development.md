@@ -328,3 +328,35 @@ For v1.0:
 8.  Keep code understandable for another developer.
 9.  Validate runtime behavior, not only compilation.
 10. Update documentation when the architecture changes.
+
+## Resume
+
+# 1. Vérifier les versions de l'environnement
+
+node --version
+npm --version
+git --version
+
+# 2. Installer les dépendances si nécessaire
+
+npm install
+
+# 3. Vérifier le formatage avec Prettier
+
+npm run format
+
+# 4. Vérifier le code avec ESLint
+
+npm run lint
+
+# 5. Vérifier que le projet compile correctement
+
+npm run build
+
+# 6. Vérifier les vulnérabilités des dépendances
+
+npm audit
+
+# 7. Lancer EpiGimp en mode développement
+
+npm run dev
